@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>lmacanda</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #020c02; overflow: hidden; font-family: monospace; }
+    canvas { display: block; }
+
+    /* Shared tooltip style — two instances, same look */
+    .tooltip {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(2,12,2,0.92);
+      border: 1px solid #00ff41;
+      color: #00ff41;
+      font-size: 0.68rem;
+      letter-spacing: 0.25em;
+      padding: 6px 18px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      z-index: 10;
+      text-transform: uppercase;
+    }
+    .tooltip.visible { opacity: 1; }
+
+    /* Projects tooltip sits slightly higher so they don't overlap */
+    #tooltip-projects { bottom: 72px; }
+
+    #vignette {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(2,12,2,0.7) 100%);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    #game-hud {
+      position: fixed;
+      top: 20px; right: 20px;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: #00ff41;
+      opacity: 0;
+      transition: opacity 0.4s;
+      z-index: 10;
+      text-align: right;
+      line-height: 2;
+    }
+    #game-hud.visible { opacity: 1; }
+
+    #click-flash {
+      position: fixed; inset: 0;
+      background: #00ff41;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    #poster-picker {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(2,12,2,0.95);
+  border: 1px solid #00ff41;
+  padding: 14px 18px 12px;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+#poster-picker.visible { display: flex; }
+
+#poster-picker p {
+  color: #00b32c;
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin: 0;
+}
+#poster-thumbs {
+  display: flex;
+  gap: 8px;
+}
+#poster-thumbs button {
+  width: 68px;
+  height: 68px;
+  border: 1px solid #003b0f;
+  background: #000;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+#poster-thumbs button:hover   { border-color: #00b32c; }
+#poster-thumbs button.active  { border-color: #00ff41; }
+#poster-thumbs button img {
+  width: 100%;
+  flex: 1;
+  object-fit: cover;
+  display: block;
+}
+#poster-thumbs button span {
+  color: #00b32c;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  padding: 2px 0;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+#poster-close {
+  position: absolute;
+  top: 6px; right: 10px;
+  background: none;
+  border: none;
+  color: #003b0f;
+  font-size: 16px;
+  cursor: pointer;
+  font-family: monospace;
+  line-height: 1;
+}
+#poster-close:hover { color: #00ff41; }
+  </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="vignette"></div>
+
+<!-- Two independent tooltips — one per interactive mesh -->
+<div class="tooltip" id="tooltip-arcade">[ CLICK TO PLAY ]</div>
+<div class="tooltip" id="tooltip-projects">[ CLICK TO VIEW PROJECTS ]</div>
+<div class="tooltip" id="tooltip-poster">[ CLICK TO CHANGE POSTER ]</div>
+
+<div id="game-hud">
+  <div>◉ GAME ACTIVE</div>
+  <div>← → MOVE &nbsp;|&nbsp; SPACE SHOOT</div>
+  <div id="score-hud">SCORE: 0</div>
+  <div style="opacity:0.4;margin-top:4px">ESC TO EXIT</div>
+</div>
+
+<div id="click-flash"></div>
+
+<div id="poster-picker">
+  <button id="poster-close">[x]</button>
+  <p>// select poster</p>
+  <div id="poster-thumbs"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three":         "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SPACE INVADERS — draws onto an offscreen canvas, applied as CanvasTexture
+// ═══════════════════════════════════════════════════════════════════════════
+
+const gameCanvas  = document.createElement('canvas');
+gameCanvas.width  = 512;
+gameCanvas.height = 512;
+const gc = gameCanvas.getContext('2d');
+
+const SCREEN_W = 512, SCREEN_H = 512;
+const COLS = 11, ROWS = 5;
+
+let gameState = 'attract';
+let score = 0, lives = 3, wave = 1;
+let player, bullets, invaders, bombs, barriers, particles;
+let invaderDir, invaderSpeed, invaderDropping, invaderTick;
+let keys = {};
+let shootCooldown = 0;
+let flashTimer = 0;
+let attractAnim = 0;
+
+function initGame() {
+  if (gameState !== 'playing') { score = 0; lives = 3; wave = 1; }
+  player = { x: SCREEN_W / 2, y: SCREEN_H - 50, w: 36, h: 14, color: '#00ff41' };
+  bullets = []; bombs = []; particles = [];
+  invaderDir = 1; invaderSpeed = 1.2 + wave * 0.3;
+  invaderDropping = false; invaderTick = 0;
+  barriers = [100, 210, 310, 410].map(x => ({
+    x, y: SCREEN_H - 110,
+    blocks: Array.from({ length: 12 }, () => true),
+  }));
+  invaders = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      invaders.push({ x: 55 + c * 40, y: 70 + r * 36, row: r, alive: true, frame: 0 });
+}
+
+function drawInvader(x, y, row, frame, color) {
+  const px = 3;
+  const shapes = [
+    [[0,0,1,1,1,1,1,0,0],[1,1,1,1,1,1,1,1,1],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[0,1,0,1,0,1,0,1,0],[1,0,1,0,0,0,1,0,1]],
+    [[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[0,1,1,1,1,1,1,1,0],[0,0,1,0,0,0,1,0,0],[0,1,0,0,0,0,0,1,0]],
+    [[0,1,0,0,0,0,0,1,0],[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[0,1,0,0,0,0,0,1,0]],
+  ];
+  const altCrab = [[1,0,0,0,0,0,0,0,1],[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,1]];
+  const si = row === 0 ? 0 : row < 3 ? 1 : 2;
+  const shape = (si === 2 && frame === 1) ? altCrab : shapes[si];
+  gc.fillStyle = color;
+  const ox = x - (9 * px) / 2, oy = y - (6 * px) / 2;
+  shape.forEach((r, ri) => r.forEach((bit, ci) => {
+    if (bit) gc.fillRect(ox + ci * px, oy + ri * px, px, px);
+  }));
+}
+
+function drawPlayer(p) {
+  gc.fillStyle = p.color;
+  gc.fillRect(p.x - 18, p.y + 4, 36, 10);
+  gc.fillRect(p.x - 12, p.y - 2, 24, 8);
+  gc.fillRect(p.x - 3,  p.y - 14, 6, 14);
+}
+
+function drawBarrier(b) {
+  b.blocks.forEach((alive, i) => {
+    if (!alive) return;
+    gc.fillStyle = '#00b32c';
+    gc.fillRect(b.x + (i % 4) * 10 - 20, b.y + Math.floor(i / 4) * 8, 9, 7);
+  });
+}
+
+function spawnParticles(x, y, color, count = 8) {
+  for (let i = 0; i < count; i++) {
+    const a = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const s = 1.5 + Math.random() * 2.5;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color });
+  }
+}
+
+let lastTime = 0;
+function tickGame(now) {
+  const dt = Math.min((now - lastTime) / 16.67, 3);
+  lastTime = now;
+
+  gc.fillStyle = '#020c02';
+  gc.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  for (let y = 0; y < SCREEN_H; y += 4) {
+    gc.fillStyle = 'rgba(0,0,0,0.18)';
+    gc.fillRect(0, y, SCREEN_W, 2);
+  }
+
+  if (gameState === 'attract') { drawAttract(now); return; }
+  if (gameState === 'dead')    { drawGameOver();   return; }
+  if (gameState === 'win')     { drawWin();        return; }
+
+  gc.fillStyle = '#00ff41';
+  gc.font = 'bold 13px monospace';
+  gc.fillText(`SCORE  ${String(score).padStart(5,'0')}`, 14, 24);
+  gc.fillText(`WAVE ${wave}`, SCREEN_W / 2 - 26, 24);
+  gc.fillText('♥'.repeat(lives), SCREEN_W - 70, 24);
+  gc.strokeStyle = '#003b0f'; gc.lineWidth = 1;
+  gc.beginPath(); gc.moveTo(0, 32); gc.lineTo(SCREEN_W, 32); gc.stroke();
+  gc.beginPath(); gc.moveTo(0, SCREEN_H - 32); gc.lineTo(SCREEN_W, SCREEN_H - 32); gc.stroke();
+
+  const spd = 3.2 * dt;
+  if (keys['ArrowLeft']  && player.x > 20)            player.x -= spd;
+  if (keys['ArrowRight'] && player.x < SCREEN_W - 20) player.x += spd;
+
+  shootCooldown = Math.max(0, shootCooldown - dt);
+  if ((keys[' '] || keys['Space']) && shootCooldown <= 0 && bullets.length < 3) {
+    bullets.push({ x: player.x, y: player.y - 14 });
+    shootCooldown = 18;
+  }
+
+  invaderTick += dt;
+  const alive = invaders.filter(i => i.alive);
+  const speed = invaderSpeed * (1 + (COLS * ROWS - alive.length) * 0.04);
+  if (invaderTick >= 40 / speed) {
+    invaderTick = 0;
+    alive.forEach(inv => inv.frame ^= 1);
+    if (invaderDropping) {
+      alive.forEach(inv => inv.y += 12);
+      invaderDir *= -1;
+      invaderDropping = false;
+    } else {
+      alive.forEach(inv => inv.x += 14 * invaderDir);
+      if (alive.some(inv => inv.x > SCREEN_W - 30 || inv.x < 30)) invaderDropping = true;
+    }
+    if (alive.length && Math.random() < 0.3 && bombs.length < 4) {
+      const s = alive[Math.floor(Math.random() * alive.length)];
+      bombs.push({ x: s.x, y: s.y + 10 });
+    }
+  }
+
+  bullets = bullets.filter(b => {
+    b.y -= 6 * dt;
+    if (b.y < 36) return false;
+    for (let inv of invaders) {
+      if (!inv.alive) continue;
+      if (Math.abs(b.x - inv.x) < 18 && Math.abs(b.y - inv.y) < 14) {
+        inv.alive = false;
+        score += (4 - inv.row) * 10;
+        document.getElementById('score-hud').textContent = `SCORE: ${score}`;
+        spawnParticles(inv.x, inv.y, '#00ff41');
+        flashTimer = 3;
+        return false;
+      }
+    }
+    for (let bar of barriers) {
+      const c = Math.floor((b.x - bar.x + 20) / 10);
+      const r = Math.floor((b.y - bar.y) / 8);
+      const idx = r * 4 + c;
+      if (c >= 0 && c < 4 && r >= 0 && r < 3 && bar.blocks[idx]) { bar.blocks[idx] = false; return false; }
+    }
+    gc.fillStyle = '#00ff41';
+    gc.fillRect(b.x - 1, b.y, 3, 10);
+    return true;
+  });
+
+  bombs = bombs.filter(b => {
+    b.y += 3.5 * dt;
+    if (b.y > SCREEN_H - 32) return false;
+    if (Math.abs(b.x - player.x) < 20 && Math.abs(b.y - player.y) < 16) {
+      lives--;
+      spawnParticles(player.x, player.y, '#ff4040', 14);
+      player.x = SCREEN_W / 2;
+      if (lives <= 0) gameState = 'dead';
+      return false;
+    }
+    for (let bar of barriers) {
+      const c = Math.floor((b.x - bar.x + 20) / 10);
+      const r = Math.floor((b.y - bar.y) / 8);
+      const idx = r * 4 + c;
+      if (c >= 0 && c < 4 && r >= 0 && r < 3 && bar.blocks[idx]) { bar.blocks[idx] = false; return false; }
+    }
+    gc.fillStyle = '#ff4040';
+    gc.fillRect(b.x + Math.sin(b.y * 0.3) * 3 - 2, b.y, 4, 10);
+    return true;
+  });
+
+  if (invaders.every(i => !i.alive)) { gameState = 'win'; return; }
+  if (alive.some(inv => inv.y > SCREEN_H - 60)) { lives = 0; gameState = 'dead'; }
+
+  particles = particles.filter(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.04;
+    if (p.life <= 0) return false;
+    gc.globalAlpha = p.life;
+    gc.fillStyle = p.color;
+    gc.fillRect(p.x - 2, p.y - 2, 4, 4);
+    gc.globalAlpha = 1;
+    return true;
+  });
+
+  barriers.forEach(b => drawBarrier(b));
+  const invColors = ['#ff4040', '#ffb000', '#ffb000', '#00ff41', '#00ff41'];
+  invaders.forEach(inv => { if (inv.alive) drawInvader(inv.x, inv.y, inv.row, inv.frame, invColors[inv.row]); });
+
+  flashTimer = Math.max(0, flashTimer - dt);
+  player.color = (flashTimer > 0 && Math.floor(flashTimer) % 2 === 1) ? '#ff4040' : '#00ff41';
+  drawPlayer(player);
+
+  gc.strokeStyle = 'rgba(0,255,65,0.1)'; gc.lineWidth = 8;
+  gc.strokeRect(0, 0, SCREEN_W, SCREEN_H);
+}
+
+function drawAttract(now) {
+  attractAnim += 0.02;
+  gc.textAlign = 'center';
+  gc.fillStyle = '#00ff41'; gc.font = 'bold 26px monospace';
+  gc.fillText('SPACE INVADERS', SCREEN_W / 2, 90);
+  gc.font = '11px monospace'; gc.fillStyle = '#00b32c';
+  gc.fillText('← →  MOVE     SPACE  SHOOT', SCREEN_W / 2, 120);
+  [[0, SCREEN_W/2 - 70], [2, SCREEN_W/2], [4, SCREEN_W/2 + 70]].forEach(([row, x]) => {
+    drawInvader(x, 200 + Math.sin(attractAnim + x * 0.01) * 10, row, Math.floor(attractAnim * 2) % 2, ['#ff4040','#ffb000','#00ff41'][[0,2,4].indexOf(row)]);
+  });
+  if (Math.floor(now / 600) % 2 === 0) {
+    gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
+    gc.fillText('[ CLICK SCREEN TO START ]', SCREEN_W / 2, 310);
+  }
+  gc.textAlign = 'left';
+}
+
+function drawGameOver() {
+  gc.textAlign = 'center';
+  gc.fillStyle = '#ff4040'; gc.font = 'bold 28px monospace';
+  gc.fillText('GAME OVER', SCREEN_W / 2, 200);
+  gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
+  gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
+  if (Math.floor(Date.now() / 600) % 2 === 0) gc.fillText('[ CLICK TO RETRY ]', SCREEN_W / 2, 285);
+  gc.textAlign = 'left';
+}
+
+function drawWin() {
+  gc.textAlign = 'center';
+  gc.fillStyle = '#ffb000'; gc.font = 'bold 24px monospace';
+  gc.fillText('WAVE CLEARED!', SCREEN_W / 2, 200);
+  gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
+  gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
+  if (Math.floor(Date.now() / 600) % 2 === 0) gc.fillText('[ CLICK FOR NEXT WAVE ]', SCREEN_W / 2, 285);
+  gc.textAlign = 'left';
+}
+
+let gameActive = false;
+window.addEventListener('keydown', e => {
+  if (!gameActive) return;
+  keys[e.key] = true;
+  if (e.key === ' ') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+const POSTERS = [
+  { label: 'DIRTY', url: 'posters/Dirty_Dancing.jpg' },
+  { label: 'RUNNING',   url: 'posters/Running.jpg'     },
+  { label: 'LABYRINTH',   url: 'posters/labyrinth.jpg' },
+  { label: 'SHORT',   url: 'posters/shortcircuit.jpg' },
+];
+
+let posterMesh    = null;
+let currentPoster = 0;
+const posterTextures = [];
+const posterTexLoader = new THREE.TextureLoader();
+
+// Pre-load all textures
+POSTERS.forEach((p, i) => {
+  const tex = posterTexLoader.load(p.url);
+  tex.flipY = true;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  posterTextures.push(tex);
+});
+
+const pickerEl       = document.getElementById('poster-picker');
+const thumbsEl       = document.getElementById('poster-thumbs');
+const tooltipPoster  = document.getElementById('tooltip-poster');
+
+// Build thumbnail buttons
+POSTERS.forEach((poster, i) => {
+  const btn = document.createElement('button');
+  btn.innerHTML = `<img src="${poster.url}" alt="${poster.label}"><span>${poster.label}</span>`;
+  btn.addEventListener('click', () => selectPoster(i));
+  thumbsEl.appendChild(btn);
+});
+
+document.getElementById('poster-close').addEventListener('click', closePosterPicker);
+
+function selectPoster(idx) {
+  currentPoster = idx;
+  if (posterMesh) {
+    posterMesh.material.map          = posterTextures[idx];
+    posterMesh.material.needsUpdate  = true;
+  }
+  thumbsEl.querySelectorAll('button').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+}
+
+function openPosterPicker()  { pickerEl.classList.add('visible');    }
+function closePosterPicker() { pickerEl.classList.remove('visible'); }
+
+// Init with first poster once scene is ready
+function initPoster() { selectPoster(0); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  THREE.JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const threeCanvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.outputEncoding      = THREE.sRGBEncoding;
+renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+
+const scene  = new THREE.Scene();
+window.scene = scene; // to allow console access for debugging
+scene.background = new THREE.Color(0x020c02);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(8, 5, 12);
+
+const controls = new OrbitControls(camera, threeCanvas);
+controls.enableDamping   = true;
+controls.target.set(0, 1, 0);
+controls.minAzimuthAngle = -Math.PI / 2;
+controls.maxAzimuthAngle =  Math.PI / 2;
+controls.minPolarAngle   =  Math.PI / 6;
+controls.maxPolarAngle   =  Math.PI / 2;
+controls.minDistance     =  4;
+controls.maxDistance     =  20;
+
+scene.add(new THREE.AmbientLight(0xffffff, 1));
+const dir = new THREE.DirectionalLight(0xffffff, 2);
+dir.position.set(5, 8, 5);
+scene.add(dir);
+
+// ── CanvasTexture ─────────────────────────────────────────────────────────
+const screenTexture = new THREE.CanvasTexture(gameCanvas);
+
+// ── Camera transition state ───────────────────────────────────────────────
+// camTransition = true ONLY while flying. Stops lerping once arrived
+// so OrbitControls can work freely without being fought by the lerp.
+const camArcade = {
+  position: new THREE.Vector3(3.071, 3.370, 3.191), // placeholder — overwritten by setCamArcade()
+  target:   new THREE.Vector3(-0.895, 3.166, 2.712),
+};
+const camDefault = {
+  position: new THREE.Vector3(8, 5, 12),
+  target:   new THREE.Vector3(0, 1, 0),
+};
+let camFocused    = false;
+let camTransition = false;
+
+function focusArcade() {
+  camFocused    = true;
+  camTransition = true;
+  controls.enabled = false;
+  gameActive = true;
+  document.getElementById('game-hud').classList.add('visible');
+}
+
+function unfocusArcade() {
+  camFocused    = false;
+  camTransition = true;
+  gameActive    = false;
+  controls.enabled = false; // stays off until tween finishes
+  document.getElementById('game-hud').classList.remove('visible');
+  keys = {};
+}
+
+// ── Console helpers ───────────────────────────────────────────────────────
+// 1. List every mesh name + material in the loaded scene:
+//    scene.traverse(c => c.isMesh && console.log(c.name, c.material?.name))
+//
+// 2. Orbit to your ideal arcade angle, then run setCamArcade() — it prints
+//    the exact lines to paste into camArcade above.
+window.setCamArcade = () => {
+  const p = camera.position, t = controls.target;
+  console.log('📋 Paste into camArcade:');
+  console.log(`camArcade.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});`);
+  console.log(`camArcade.target.set(${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)});`);
+};
+
+// ── Raycaster ─────────────────────────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse     = new THREE.Vector2();
+
+// Two meshes, two tooltips — completely independent
+let arcadeMesh   = null;  // Object_10 — Arcade_screen
+let projectsMesh = null;  // Object_140 — Screen-nc (the monitor)
+
+const tooltipArcade   = document.getElementById('tooltip-arcade');
+const tooltipProjects = document.getElementById('tooltip-projects');
+
+window.addEventListener('mousemove', e => {
+  mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+});
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && camFocused) unfocusArcade();
+});
+
+threeCanvas.addEventListener('click', () => {
+  raycaster.setFromCamera(mouse, camera);
+
+  const flash = document.getElementById('click-flash');
+  const doFlash = () => {
+    flash.style.transition = 'none';
+    flash.style.opacity = '0.35';
+    setTimeout(() => { flash.style.transition = 'opacity 0.3s'; flash.style.opacity = '0'; }, 60);
+  };
+
+  // ── Arcade click
+  if (arcadeMesh && !camFocused) {
+    const hit = raycaster.intersectObject(arcadeMesh, true);
+    if (hit.length > 0) {
+      doFlash();
+      if (gameState === 'attract') { gameState = 'playing'; initGame(); }
+      focusArcade();
+      return;
+    }
+  }
+
+  // ── Arcade in-game state transitions (dead/win)
+  if (arcadeMesh && camFocused) {
+    const hit = raycaster.intersectObject(arcadeMesh, true);
+    if (hit.length > 0) {
+      if (gameState === 'dead')     { gameState = 'playing'; initGame(); }
+      else if (gameState === 'win') { wave++; gameState = 'playing'; initGame(); }
+      return;
+    }
+  }
+
+  // ── Projects monitor click
+  if (projectsMesh && !camFocused) {
+    const hit = raycaster.intersectObject(projectsMesh, true);
+    if (hit.length > 0) {
+      doFlash();
+      setTimeout(() => { window.location.href = 'projects.html'; }, 120);
+    }
+  }
+
+  // ── Poster click — opens picker
+if (posterMesh && !camFocused) {
+  const hit = raycaster.intersectObject(posterMesh, true);
+  if (hit.length > 0) {
+    openPosterPicker();
+    return;
+  }
+}
+});
+
+// ── Load GLTF ─────────────────────────────────────────────────────────────
+new GLTFLoader().load(
+  'scene.gltf',
+  (gltf) => {
+    scene.add(gltf.scene);
+
+    gltf.scene.traverse(child => {
+      if (!child.isMesh) return;
+
+      // Arcade screen — gets the Space Invaders canvas texture
+      if (child.name === 'Object_10') {
+        arcadeMesh = child;
+        child.material = new THREE.MeshStandardMaterial({
+          map:               screenTexture,
+          emissiveMap:       screenTexture,
+          emissive:          new THREE.Color(0xffffff),
+          emissiveIntensity: 1.4,
+          roughness:         0.3,
+          metalness:         0.0,
+        });
+        console.log('✅ Arcade mesh:', child.name);
+        console.log('ℹ️  Orbit to a good angle then run setCamArcade() in the console.');
+      }
+
+      // Projects monitor — clickable, navigates to projects.html
+      if (child.name === 'Object_140') {
+        projectsMesh = child;
+        console.log('✅ Projects monitor mesh:', child.name);
+      }
+
+      
+if (child.name === 'Object_102') { 
+  posterMesh = child;
+  // Keep its original material — selectPoster() will set the map
+  console.log('✅ Poster mesh:', child.name, '| mat:', child.material?.name);
+}
+    });
+
+    if (!arcadeMesh)   console.warn('⚠️  Arcade mesh (Object_10) not found.');
+    if (!projectsMesh) console.warn('⚠️  Projects mesh (Object_140) not found.');
+    if (!posterMesh)   console.warn('⚠️  Poster mesh not found — check name in traverse.');
+initPoster(); // ← add this
+    console.log('Debug: scene.traverse(c => c.isMesh && console.log(c.name, c.material?.name))');
+  },
+  p => console.log(`Loading ${Math.round(p.loaded / p.total * 100)}%`),
+  e => console.error(e)
+);
+
+// ── Render loop ───────────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+
+  tickGame(performance.now());
+  screenTexture.needsUpdate = true;
+
+  // Lerp only while transitioning — stops the moment we arrive
+  if (camTransition) {
+    const dest = camFocused ? camArcade : camDefault;
+    camera.position.lerp(dest.position, 0.07);
+    controls.target.lerp(dest.target,   0.07);
+
+    if (camera.position.distanceTo(dest.position) < 0.02) {
+      camera.position.copy(dest.position);
+      controls.target.copy(dest.target);
+      camTransition = false;
+      if (!camFocused) controls.enabled = true; // restore orbit after fly-back
+    }
+  }
+
+  // Hover — only check when free-roaming (not focused, not mid-tween)
+  if (!camFocused && !camTransition) {
+    raycaster.setFromCamera(mouse, camera);
+
+    const hitArcade   = arcadeMesh   ? raycaster.intersectObject(arcadeMesh,   true).length > 0 : false;
+const hitProjects = projectsMesh ? raycaster.intersectObject(projectsMesh, true).length > 0 : false;
+const hitPoster   = posterMesh   ? raycaster.intersectObject(posterMesh,   true).length > 0 : false;
+
+tooltipArcade.classList.toggle('visible',   hitArcade);
+tooltipProjects.classList.toggle('visible', hitProjects);
+tooltipPoster.classList.toggle('visible',   hitPoster && !pickerEl.classList.contains('visible'));
+threeCanvas.style.cursor = (hitArcade || hitProjects || hitPoster) ? 'pointer' : 'default';
+  } else {
+    tooltipArcade.classList.remove('visible');
+    tooltipProjects.classList.remove('visible');
+    threeCanvas.style.cursor = 'default';
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+animate();
+initGame();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
