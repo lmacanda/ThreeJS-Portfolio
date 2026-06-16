@@ -39,22 +39,22 @@
       z-index: 5;
     }
 
-    /* -- Hint text ── */
+    /* ── Hint ── */
     #hint {
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #00ff41;
-  font-size: 0.68rem;
-  letter-spacing: 0.25em;
-  pointer-events: none;
-  z-index: 10;
-  text-transform: uppercase;
-  opacity: 1;
-  transition: opacity 0.8s ease;
-}
-#hint.gone { opacity: 0; }
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #00ff41;
+      font-size: 0.68rem;
+      letter-spacing: 0.25em;
+      pointer-events: none;
+      z-index: 10;
+      text-transform: uppercase;
+      opacity: 1;
+      transition: opacity 0.8s ease;
+    }
+    #hint.gone { opacity: 0; }
 
     /* ── Game HUD ── */
     #game-hud {
@@ -130,7 +130,7 @@
       min-width: 280px;
     }
     #mood-prompt.visible { display: flex; }
-    #mood-prompt p       { color: #00b32c; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; margin: 0; }
+    #mood-prompt p { color: #00b32c; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; margin: 0; }
     #mood-close {
       position: absolute; top: 6px; right: 10px;
       background: none; border: none; color: #003b0f;
@@ -145,14 +145,14 @@
       transition: border-color 0.15s, color 0.15s;
     }
     #mood-hints button:hover { border-color: #00b32c; color: #00b32c; }
-    #mood-row    { display: flex; gap: 6px; align-items: center; }
-    #mood-input  {
+    #mood-row { display: flex; gap: 6px; align-items: center; }
+    #mood-input {
       flex: 1; background: transparent; border: none;
       border-bottom: 1px solid #003b0f; color: #00ff41;
       font-family: monospace; font-size: 0.72rem; letter-spacing: 0.15em;
       padding: 4px 2px; outline: none;
     }
-    #mood-input:focus       { border-bottom-color: #00ff41; }
+    #mood-input:focus        { border-bottom-color: #00ff41; }
     #mood-input::placeholder { color: #003b0f; }
     #mood-submit {
       background: transparent; border: 1px solid #00b32c; color: #00b32c;
@@ -161,10 +161,10 @@
     }
     #mood-submit:hover    { border-color: #00ff41; color: #00ff41; }
     #mood-submit:disabled { opacity: 0.3; cursor: default; }
-    #mood-swatches        { display: flex; gap: 4px; height: 6px; }
-    #mood-swatches span   { flex: 1; }
+    #mood-swatches      { display: flex; gap: 4px; height: 6px; }
+    #mood-swatches span { flex: 1; }
     #mood-status { color: #00b32c; font-size: 0.58rem; letter-spacing: 0.2em; min-height: 12px; }
-    #mood-reset  {
+    #mood-reset {
       background: none; border: none; color: #003b0f;
       font-size: 0.55rem; letter-spacing: 0.2em; cursor: pointer;
       font-family: monospace; text-transform: uppercase;
@@ -307,7 +307,6 @@ function unfocusArcade() {
   keys = {};
 }
 
-// console helper: orbit to ideal angle then run setCamArcade()
 window.setCamArcade = () => {
   const p = camera.position, t = controls.target;
   console.log(`camArcade.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});`);
@@ -321,9 +320,9 @@ window.setCamArcade = () => {
 let arcadeMesh = null;  // Object_10  — space invaders screen
 let aboutMesh  = null;  // Object_140 — monitor → about.html
 let posterMesh = null;  // Object_102 — swappable poster
-let musicMesh  = null;  // Object_108  — music box → NTS Radio
+let musicMesh  = null;  // Object_108 — music box → NTS Radio
 let glowMesh   = null;  // Object_90  — mood trigger
-let chairMesh  = null;  // Object_94  — spinning chair
+let chairMesh  = null;  // Chair_10   — spinning chair group
 
 const tooltipArcade = document.getElementById('tooltip-arcade');
 const tooltipAbout  = document.getElementById('tooltip-about');
@@ -331,8 +330,7 @@ const tooltipPoster = document.getElementById('tooltip-poster');
 const tooltipMusic  = document.getElementById('tooltip-music');
 const tooltipGlow   = document.getElementById('tooltip-glow');
 const tooltipChair  = document.getElementById('tooltip-chair');
-
-const allTooltips = [tooltipArcade, tooltipAbout, tooltipPoster, tooltipMusic, tooltipGlow, tooltipChair];
+const allTooltips   = [tooltipArcade, tooltipAbout, tooltipPoster, tooltipMusic, tooltipGlow, tooltipChair];
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  RAYCASTER & MOUSE
@@ -340,6 +338,10 @@ const allTooltips = [tooltipArcade, tooltipAbout, tooltipPoster, tooltipMusic, t
 
 const raycaster = new THREE.Raycaster();
 const mouse     = new THREE.Vector2();
+
+window.THREE     = THREE;
+window.raycaster = raycaster;
+window.mouse     = mouse;
 
 window.addEventListener('mousemove', e => {
   mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1;
@@ -374,24 +376,11 @@ threeCanvas.addEventListener('click', () => {
   }
 
   if (!camFocused) {
-    // About monitor
-    if (aboutMesh && hits(aboutMesh)) {
-      doFlash();
-      setTimeout(() => { window.location.href = 'about.html'; }, 120);
-      return;
-    }
-    // Poster
+    if (aboutMesh  && hits(aboutMesh))  { doFlash(); setTimeout(() => { window.location.href = 'about.html'; }, 120); return; }
     if (posterMesh && hits(posterMesh)) { openPosterPicker(); return; }
-    // Music box
-    if (musicMesh && hits(musicMesh)) {
-      doFlash();
-      setTimeout(() => window.open('https://www.nts.live', '_blank'), 120);
-      return;
-    }
-    // Mood / glow
-    if (glowMesh && hits(glowMesh)) { doFlash(); openMoodPrompt(); return; }
-    // Chair spin
-    if (chairMesh && hits(chairMesh)) { chairSpeed = 0.15; return; }
+    if (musicMesh  && hits(musicMesh))  { doFlash(); setTimeout(() => window.open('https://www.nts.live', '_blank'), 120); return; }
+    if (glowMesh   && hits(glowMesh))   { doFlash(); openMoodPrompt(); return; }
+    if (chairMesh  && hits(chairMesh))  { chairSpeed = 0.15; return; }
   }
 });
 
@@ -406,7 +395,7 @@ let chairSpeed = 0;
 // ═══════════════════════════════════════════════════════════════════════════
 
 const POSTERS = [
-  { label: 'DIRTY',     url: 'posters/theflyposter.jpg' },
+  { label: 'DIRTY',     url: 'posters/theflyposter.jpg'  },
   { label: 'RUNNING',   url: 'posters/Running.jpg'       },
   { label: 'LABYRINTH', url: 'posters/labyrinth.jpg'     },
   { label: 'SHORT',     url: 'posters/shortcircuit.jpg'  },
@@ -460,8 +449,7 @@ const MOOD_FALLBACKS = [
   { text: 'Retro Amber',  colors: ['#0c0800','#1a1000','#332200','#886600','#ffcc00'] },
 ];
 
-const glowMeshes   = []; // all Yellow_Glow meshes — tinted by mood
-
+const glowMeshes   = [];
 const moodPrompt   = document.getElementById('mood-prompt');
 const moodInput    = document.getElementById('mood-input');
 const moodSubmit   = document.getElementById('mood-submit');
@@ -469,7 +457,6 @@ const moodSwatches = document.getElementById('mood-swatches');
 const moodStatus   = document.getElementById('mood-status');
 const moodHints    = document.getElementById('mood-hints');
 
-// Build hint chips
 MOOD_FALLBACKS.forEach(f => {
   const chip = document.createElement('button');
   chip.textContent = f.text.split(' ')[0].toLowerCase();
@@ -485,8 +472,8 @@ document.getElementById('mood-reset').addEventListener('click', () => {
   ambientLight.color.set(0xffffff);
   dirLight.color.set(0xffffff);
   glowMeshes.forEach(m => { if (m.material.emissive) m.material.emissive.set(0xffd080); });
-  moodSwatches.innerHTML   = '';
-  moodStatus.textContent   = '// default restored';
+  moodSwatches.innerHTML = '';
+  moodStatus.textContent = '// default restored';
 });
 
 moodSubmit.addEventListener('click', () => { const q = moodInput.value.trim(); if (q) applyMood(q); });
@@ -500,11 +487,11 @@ function openMoodPrompt()  { closePosterPicker(); moodPrompt.classList.add('visi
 function closeMoodPrompt() { moodPrompt.classList.remove('visible'); moodInput.value = ''; moodStatus.textContent = ''; moodSwatches.innerHTML = ''; }
 
 function lerpSceneColors(palette) {
-  const c          = palette.colors;
-  const bgTarget   = new THREE.Color(c[0]);
-  const ambTarget  = new THREE.Color(c[2]);
-  const dirTarget  = new THREE.Color(c[3]);
-  const glowTarget = new THREE.Color(c[4]);
+  const c         = palette.colors;
+  const bgTarget  = new THREE.Color(c[0]);
+  const ambTarget = new THREE.Color(c[2]);
+  const dirTarget = new THREE.Color(c[3]);
+  const glowTarget= new THREE.Color(c[4]);
 
   document.body.style.background = c[0];
 
@@ -709,8 +696,8 @@ function tickGame(now) {
     return true;
   });
 
-  if (invaders.every(i => !i.alive))              { gameState = 'win'; return; }
-  if (alive.some(inv => inv.y > SCREEN_H - 60))   { lives = 0; gameState = 'dead'; }
+  if (invaders.every(i => !i.alive))            { gameState = 'win'; return; }
+  if (alive.some(inv => inv.y > SCREEN_H - 60)) { lives = 0; gameState = 'dead'; }
 
   particles = particles.filter(p => {
     p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.04;
@@ -768,7 +755,7 @@ new GLTFLoader().load(
     scene.add(gltf.scene);
 
     gltf.scene.traverse(child => {
-      // ── Chair group (not a mesh — must check before the isMesh guard)
+      // Chair group — must be before isMesh guard
       if (child.name === 'Chair_10') {
         chairMesh = child;
         console.log('✅ Chair group:', child.name);
@@ -776,7 +763,7 @@ new GLTFLoader().load(
 
       if (!child.isMesh) return;
 
-      // ── Mesh assignments
+      // Mesh assignments
       switch (child.name) {
         case 'Object_10':
           arcadeMesh = child;
@@ -791,15 +778,16 @@ new GLTFLoader().load(
         case 'Object_102': posterMesh = child; console.log('✅ Poster:', child.name); break;
         case 'Object_108': musicMesh  = child; console.log('✅ Music:',  child.name); break;
         case 'Object_90':  glowMesh   = child; console.log('✅ Glow:',   child.name); break;
+      }
 
-        case 'Object_99':
-  const fixedTex = new THREE.TextureLoader().load('posters/Dirty_Dancing.jpg');
-  fixedTex.flipY = true;
-  fixedTex.colorSpace = THREE.SRGBColorSpace;
-  child.material.map = fixedTex;
-  child.material.needsUpdate = true;
-  console.log('✅ Fixed poster:', child.name);
-  break;
+      // Fixed poster on Object_99
+      if (child.name === 'Object_99') {
+        const fixedTex = new THREE.TextureLoader().load('posters/Dirty_Dancing.jpg');
+        fixedTex.flipY = true;
+        fixedTex.colorSpace = THREE.SRGBColorSpace;
+        child.material.map = fixedTex;
+        child.material.needsUpdate = true;
+        console.log('✅ Fixed poster:', child.name);
       }
 
       if (child.material?.name === 'Yellow_Glow') glowMeshes.push(child);
@@ -818,6 +806,7 @@ new GLTFLoader().load(
   p => console.log(`Loading ${Math.round(p.loaded / p.total * 100)}%`),
   e => console.error(e)
 );
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  RENDER LOOP
 // ═══════════════════════════════════════════════════════════════════════════
@@ -825,7 +814,6 @@ new GLTFLoader().load(
 function animate() {
   requestAnimationFrame(animate);
 
-  // Game tick
   tickGame(performance.now());
   screenTexture.needsUpdate = true;
 
@@ -879,22 +867,23 @@ function animate() {
 
 animate();
 initGame();
+
 // ── Intro hint
-const hintEl = document.getElementById('hint');
+const hintEl   = document.getElementById('hint');
 const hintText = '// drag and explore the room';
-let hintIdx = 0;
+let hintIdx    = 0;
 
 const hintType = setInterval(() => {
   hintEl.textContent = hintText.slice(0, ++hintIdx);
   if (hintIdx >= hintText.length) clearInterval(hintType);
 }, 45);
 
-// fade out on first interaction
 function dismissHint() {
   hintEl.classList.add('gone');
   threeCanvas.removeEventListener('pointerdown', dismissHint);
 }
 threeCanvas.addEventListener('pointerdown', dismissHint);
+
 </script>
 </body>
 </html>
