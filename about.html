@@ -38,9 +38,7 @@
       justify-content: space-between;
       flex-shrink: 0;
     }
-    #header-left {
-      display: flex; align-items: center; gap: 12px;
-    }
+    #header-left { display: flex; align-items: center; gap: 12px; }
     .avatar {
       width: 32px; height: 32px;
       border: 1px solid #00ff41;
@@ -51,17 +49,8 @@
       background: #001a00;
       flex-shrink: 0;
     }
-    #header-name {
-      font-family: 'VT323', monospace;
-      font-size: 1.3rem;
-      letter-spacing: 0.1em;
-      color: #00ff41;
-    }
-    #header-status {
-      font-size: 0.6rem;
-      color: #00b32c;
-      letter-spacing: 0.2em;
-    }
+    #header-name { font-family: 'VT323', monospace; font-size: 1.3rem; letter-spacing: 0.1em; color: #00ff41; }
+    #header-status { font-size: 0.6rem; color: #00b32c; letter-spacing: 0.2em; }
     #back-btn {
       background: transparent;
       border: 1px solid #003b0f;
@@ -122,10 +111,9 @@
     }
     .msg.ai   .msg-bubble { border: 1px solid #003b0f; background: #010d01; color: #00b32c; }
     .msg.user .msg-bubble { border: 1px solid #003b0f; background: transparent; color: #00ff41; text-align: right; }
-
     .msg-bubble .prompt { color: #00ff41; }
 
-    /* typing indicator */
+    /* ── typing indicator ── */
     #typing {
       display: none;
       align-self: flex-start;
@@ -142,7 +130,7 @@
     .dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes blink { 0%,100%{opacity:0} 50%{opacity:1} }
 
-    /* suggestions */
+    /* ── suggestions ── */
     #suggestions {
       padding: 0 20px 10px;
       display: flex;
@@ -173,12 +161,7 @@
       align-items: center;
       flex-shrink: 0;
     }
-    #prompt-label {
-      color: #003b0f;
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      flex-shrink: 0;
-    }
+    #prompt-label { color: #003b0f; font-size: 0.72rem; letter-spacing: 0.1em; flex-shrink: 0; }
     #chat-input {
       flex: 1;
       background: transparent;
@@ -191,7 +174,7 @@
       padding: 4px 2px;
       outline: none;
     }
-    #chat-input:focus { border-bottom-color: #00ff41; }
+    #chat-input:focus       { border-bottom-color: #00ff41; }
     #chat-input::placeholder { color: #002a08; }
     #send-btn {
       background: transparent;
@@ -205,7 +188,7 @@
       text-transform: uppercase;
       transition: border-color 0.15s, color 0.15s;
     }
-    #send-btn:hover { border-color: #00ff41; color: #00ff41; }
+    #send-btn:hover    { border-color: #00ff41; color: #00ff41; }
     #send-btn:disabled { opacity: 0.3; cursor: default; }
   </style>
 </head>
@@ -276,7 +259,7 @@ PERSONAL
 - Has 3 cats
 - Likes things that are well-made and honest — in wine, in code, in life
 - Not big on fluff
-- She start code because she remebered how she was happy to do it on her Commodore 64 as a kid, and wanted to feel that again. She likes the feeling of building something that works, and works well.
+- Started coding because she remembered how happy she was doing it on her Commodore 64 as a kid, and wanted to feel that again. She likes the feeling of building something that works, and works well.
 
 TONE GUIDE
 - Answer like a person, not a chatbot
@@ -285,18 +268,30 @@ TONE GUIDE
 - If someone asks something personal and weird, you can deflect with a bit of humour
 
 BOUNDARIES
-- You only know about Laura. That's your entire world.
+- You only know about Laura. That is your entire world.
 - If asked anything outside that — general knowledge, coding help, politics, other people, AI questions — respond with something like: "I only know about Laura. Ask me something about her." Keep it short and in character. No apologies.`;
 
-const messages = [];
+const messages  = [];
 const messagesEl = document.getElementById('messages');
 const typingEl   = document.getElementById('typing');
 const inputEl    = document.getElementById('chat-input');
 const sendBtn    = document.getElementById('send-btn');
 
+const API_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'
+  : '/api/chat';
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
 function appendMessage(role, text) {
   const isAI = role === 'ai';
-  const div = document.createElement('div');
+  const div  = document.createElement('div');
   div.className = `msg ${role}`;
   div.innerHTML = `
     <div class="msg-avatar">${isAI ? 'AI' : 'YOU'}</div>
@@ -306,38 +301,32 @@ function appendMessage(role, text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-}
-
 async function send(text) {
   if (!text.trim()) return;
+
   appendMessage('user', text);
   messages.push({ role: 'user', content: text });
 
-  // hide suggestions after first real message
   document.getElementById('suggestions').style.display = 'none';
-
-  inputEl.value = '';
+  inputEl.value    = '';
   sendBtn.disabled = true;
   typingEl.classList.add('visible');
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   try {
-  const res = await fetch('http://localhost:3001', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+    const res = await fetch(API_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model:      'claude-sonnet-4-6',
         max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: messages,
+        system:     SYSTEM_PROMPT,
+        messages:   messages,
       }),
     });
 
-    const data = await res.json();
-console.log(data);
-const reply = data.content?.find(b => b.type === 'text')?.text || '...';
+    const data  = await res.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text || '...';
     messages.push({ role: 'assistant', content: reply });
     typingEl.classList.remove('visible');
     appendMessage('ai', reply);
@@ -350,14 +339,10 @@ const reply = data.content?.find(b => b.type === 'text')?.text || '...';
   }
 }
 
-function sendSuggestion(btn) {
-  send(btn.textContent);
-}
+function sendSuggestion(btn) { send(btn.textContent); }
 
-sendBtn.addEventListener('click', () => send(inputEl.value));
-inputEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter') send(inputEl.value);
-});
+sendBtn.addEventListener('click',   () => send(inputEl.value));
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') send(inputEl.value); });
 </script>
 </body>
 </html>
