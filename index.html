@@ -8,7 +8,7 @@
     body { background: #020c02; overflow: hidden; font-family: monospace; }
     canvas { display: block; }
 
-    /* Shared tooltip style — two instances, same look */
+    /* ── Tooltips ── */
     .tooltip {
       position: fixed;
       bottom: 40px;
@@ -28,10 +28,10 @@
       text-transform: uppercase;
     }
     .tooltip.visible { opacity: 1; }
+    #tooltip-about { bottom: 72px; }
+    #tooltip-glow  { bottom: 72px; }
 
-    /* Projects tooltip sits slightly higher so they don't overlap */
-    #tooltip-projects { bottom: 72px; }
-
+    /* ── Vignette ── */
     #vignette {
       position: fixed; inset: 0;
       background: radial-gradient(ellipse at center, transparent 55%, rgba(2,12,2,0.7) 100%);
@@ -39,6 +39,24 @@
       z-index: 5;
     }
 
+    /* -- Hint text ── */
+    #hint {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #00ff41;
+  font-size: 0.68rem;
+  letter-spacing: 0.25em;
+  pointer-events: none;
+  z-index: 10;
+  text-transform: uppercase;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+#hint.gone { opacity: 0; }
+
+    /* ── Game HUD ── */
     #game-hud {
       position: fixed;
       top: 20px; right: 20px;
@@ -53,6 +71,7 @@
     }
     #game-hud.visible { opacity: 1; }
 
+    /* ── Click flash ── */
     #click-flash {
       position: fixed; inset: 0;
       background: #00ff41;
@@ -61,86 +80,114 @@
       z-index: 20;
     }
 
+    /* ── Poster picker ── */
     #poster-picker {
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(2,12,2,0.95);
-  border: 1px solid #00ff41;
-  padding: 14px 18px 12px;
-  z-index: 10;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-#poster-picker.visible { display: flex; }
+      position: fixed;
+      bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(2,12,2,0.95);
+      border: 1px solid #00ff41;
+      padding: 14px 18px 12px;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #poster-picker.visible { display: flex; }
+    #poster-picker p { color: #00b32c; font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase; margin: 0; }
+    #poster-thumbs { display: flex; gap: 8px; }
+    #poster-thumbs button {
+      width: 68px; height: 68px;
+      border: 1px solid #003b0f; background: #000;
+      cursor: pointer; padding: 0; overflow: hidden;
+      transition: border-color 0.15s;
+      display: flex; flex-direction: column;
+    }
+    #poster-thumbs button:hover  { border-color: #00b32c; }
+    #poster-thumbs button.active { border-color: #00ff41; }
+    #poster-thumbs button img    { width: 100%; flex: 1; object-fit: cover; display: block; }
+    #poster-thumbs button span   { color: #00b32c; font-size: 0.55rem; letter-spacing: 0.1em; text-align: center; padding: 2px 0; font-family: monospace; text-transform: uppercase; }
+    #poster-close {
+      position: absolute; top: 6px; right: 10px;
+      background: none; border: none; color: #003b0f;
+      font-size: 16px; cursor: pointer; font-family: monospace; line-height: 1;
+    }
+    #poster-close:hover { color: #00ff41; }
 
-#poster-picker p {
-  color: #00b32c;
-  font-size: 0.62rem;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  margin: 0;
-}
-#poster-thumbs {
-  display: flex;
-  gap: 8px;
-}
-#poster-thumbs button {
-  width: 68px;
-  height: 68px;
-  border: 1px solid #003b0f;
-  background: #000;
-  cursor: pointer;
-  padding: 0;
-  overflow: hidden;
-  transition: border-color 0.15s;
-  display: flex;
-  flex-direction: column;
-}
-#poster-thumbs button:hover   { border-color: #00b32c; }
-#poster-thumbs button.active  { border-color: #00ff41; }
-#poster-thumbs button img {
-  width: 100%;
-  flex: 1;
-  object-fit: cover;
-  display: block;
-}
-#poster-thumbs button span {
-  color: #00b32c;
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  text-align: center;
-  padding: 2px 0;
-  font-family: monospace;
-  text-transform: uppercase;
-}
-#poster-close {
-  position: absolute;
-  top: 6px; right: 10px;
-  background: none;
-  border: none;
-  color: #003b0f;
-  font-size: 16px;
-  cursor: pointer;
-  font-family: monospace;
-  line-height: 1;
-}
-#poster-close:hover { color: #00ff41; }
+    /* ── Mood prompt ── */
+    #mood-prompt {
+      position: fixed;
+      bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(2,12,2,0.97);
+      border: 1px solid #00ff41;
+      padding: 10px 14px;
+      z-index: 15;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 280px;
+    }
+    #mood-prompt.visible { display: flex; }
+    #mood-prompt p       { color: #00b32c; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; margin: 0; }
+    #mood-close {
+      position: absolute; top: 6px; right: 10px;
+      background: none; border: none; color: #003b0f;
+      font-size: 14px; cursor: pointer; font-family: monospace; line-height: 1;
+    }
+    #mood-close:hover { color: #00ff41; }
+    #mood-hints { display: flex; flex-wrap: wrap; gap: 5px; }
+    #mood-hints button {
+      background: transparent; border: 1px solid #003b0f; color: #003b0f;
+      font-family: monospace; font-size: 0.55rem; letter-spacing: 0.2em;
+      padding: 3px 8px; cursor: pointer; text-transform: uppercase;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    #mood-hints button:hover { border-color: #00b32c; color: #00b32c; }
+    #mood-row    { display: flex; gap: 6px; align-items: center; }
+    #mood-input  {
+      flex: 1; background: transparent; border: none;
+      border-bottom: 1px solid #003b0f; color: #00ff41;
+      font-family: monospace; font-size: 0.72rem; letter-spacing: 0.15em;
+      padding: 4px 2px; outline: none;
+    }
+    #mood-input:focus       { border-bottom-color: #00ff41; }
+    #mood-input::placeholder { color: #003b0f; }
+    #mood-submit {
+      background: transparent; border: 1px solid #00b32c; color: #00b32c;
+      font-family: monospace; font-size: 0.6rem; letter-spacing: 0.2em;
+      padding: 4px 10px; cursor: pointer; text-transform: uppercase;
+    }
+    #mood-submit:hover    { border-color: #00ff41; color: #00ff41; }
+    #mood-submit:disabled { opacity: 0.3; cursor: default; }
+    #mood-swatches        { display: flex; gap: 4px; height: 6px; }
+    #mood-swatches span   { flex: 1; }
+    #mood-status { color: #00b32c; font-size: 0.58rem; letter-spacing: 0.2em; min-height: 12px; }
+    #mood-reset  {
+      background: none; border: none; color: #003b0f;
+      font-size: 0.55rem; letter-spacing: 0.2em; cursor: pointer;
+      font-family: monospace; text-transform: uppercase;
+      align-self: flex-start; padding: 0;
+    }
+    #mood-reset:hover { color: #00ff41; }
   </style>
 </head>
 <body>
 
 <canvas id="canvas"></canvas>
 <div id="vignette"></div>
+<div id="hint"></div>
 
-<!-- Two independent tooltips — one per interactive mesh -->
+<!-- Tooltips -->
 <div class="tooltip" id="tooltip-arcade">[ CLICK TO PLAY ]</div>
-<div class="tooltip" id="tooltip-projects">[ CLICK TO VIEW PROJECTS ]</div>
+<div class="tooltip" id="tooltip-about">[ CLICK TO KNOW ABOUT ]</div>
 <div class="tooltip" id="tooltip-poster">[ CLICK TO CHANGE POSTER ]</div>
+<div class="tooltip" id="tooltip-music">[ CLICK TO LISTEN ]</div>
+<div class="tooltip" id="tooltip-glow">[ CLICK TO SET MOOD ]</div>
+<div class="tooltip" id="tooltip-chair">[ CLICK TO SPIN ]</div>
 
+<!-- Game HUD -->
 <div id="game-hud">
   <div>◉ GAME ACTIVE</div>
   <div>← → MOVE &nbsp;|&nbsp; SPACE SHOOT</div>
@@ -150,10 +197,25 @@
 
 <div id="click-flash"></div>
 
+<!-- Poster picker -->
 <div id="poster-picker">
   <button id="poster-close">[x]</button>
   <p>// select poster</p>
   <div id="poster-thumbs"></div>
+</div>
+
+<!-- Mood prompt -->
+<div id="mood-prompt">
+  <button id="mood-close">[x]</button>
+  <p>// set room mood</p>
+  <div id="mood-hints"></div>
+  <div id="mood-row">
+    <input id="mood-input" type="text" placeholder="or type anything..." maxlength="32" autocomplete="off" />
+    <button id="mood-submit">apply</button>
+  </div>
+  <div id="mood-swatches"></div>
+  <div id="mood-status"></div>
+  <button id="mood-reset">[ reset to default ]</button>
 </div>
 
 <script type="importmap">
@@ -171,25 +233,347 @@ import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  SPACE INVADERS — draws onto an offscreen canvas, applied as CanvasTexture
+//  SCENE SETUP
 // ═══════════════════════════════════════════════════════════════════════════
 
-const gameCanvas  = document.createElement('canvas');
-gameCanvas.width  = 512;
-gameCanvas.height = 512;
+const threeCanvas = document.getElementById('canvas');
+
+const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.outputColorSpace    = THREE.SRGBColorSpace;
+renderer.toneMapping         = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020c02);
+window.scene = scene;
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(8, 5, 12);
+window.camera = camera;
+
+const controls = new OrbitControls(camera, threeCanvas);
+controls.enableDamping   = true;
+controls.target.set(0, 2.5, 0);
+controls.minAzimuthAngle = -Math.PI / 2;
+controls.maxAzimuthAngle =  Math.PI / 2;
+controls.minPolarAngle   =  Math.PI / 6;
+controls.maxPolarAngle   =  Math.PI / 2;
+controls.minDistance     =  4;
+controls.maxDistance     =  20;
+window.controls = controls;
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+dirLight.position.set(5, 8, 5);
+scene.add(dirLight);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CAMERA — arcade focus / default
+// ═══════════════════════════════════════════════════════════════════════════
+
+const camArcade = {
+  position: new THREE.Vector3(3.071, 3.370, 3.191),
+  target:   new THREE.Vector3(-0.895, 3.166, 2.712),
+};
+const camDefault = {
+  position: new THREE.Vector3(8, 5, 12),
+  target:   new THREE.Vector3(0, 1, 0),
+};
+
+let camFocused    = false;
+let camTransition = false;
+
+function focusArcade() {
+  camFocused = true; camTransition = true;
+  controls.enabled = false;
+  gameActive = true;
+  document.getElementById('game-hud').classList.add('visible');
+}
+
+function unfocusArcade() {
+  camFocused = false; camTransition = true;
+  gameActive = false;
+  controls.enabled = false;
+  document.getElementById('game-hud').classList.remove('visible');
+  keys = {};
+}
+
+// console helper: orbit to ideal angle then run setCamArcade()
+window.setCamArcade = () => {
+  const p = camera.position, t = controls.target;
+  console.log(`camArcade.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});`);
+  console.log(`camArcade.target.set(${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)});`);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MESHES & TOOLTIPS
+// ═══════════════════════════════════════════════════════════════════════════
+
+let arcadeMesh = null;  // Object_10  — space invaders screen
+let aboutMesh  = null;  // Object_140 — monitor → about.html
+let posterMesh = null;  // Object_102 — swappable poster
+let musicMesh  = null;  // Object_108  — music box → NTS Radio
+let glowMesh   = null;  // Object_90  — mood trigger
+let chairMesh  = null;  // Object_94  — spinning chair
+
+const tooltipArcade = document.getElementById('tooltip-arcade');
+const tooltipAbout  = document.getElementById('tooltip-about');
+const tooltipPoster = document.getElementById('tooltip-poster');
+const tooltipMusic  = document.getElementById('tooltip-music');
+const tooltipGlow   = document.getElementById('tooltip-glow');
+const tooltipChair  = document.getElementById('tooltip-chair');
+
+const allTooltips = [tooltipArcade, tooltipAbout, tooltipPoster, tooltipMusic, tooltipGlow, tooltipChair];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RAYCASTER & MOUSE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const raycaster = new THREE.Raycaster();
+const mouse     = new THREE.Vector2();
+
+window.addEventListener('mousemove', e => {
+  mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+});
+
+const flash = document.getElementById('click-flash');
+function doFlash() {
+  flash.style.transition = 'none';
+  flash.style.opacity = '0.35';
+  setTimeout(() => { flash.style.transition = 'opacity 0.3s'; flash.style.opacity = '0'; }, 60);
+}
+
+function hits(mesh) {
+  return mesh ? raycaster.intersectObject(mesh, true).length > 0 : false;
+}
+
+threeCanvas.addEventListener('click', () => {
+  raycaster.setFromCamera(mouse, camera);
+
+  // Arcade — focus / in-game transitions
+  if (arcadeMesh && !camFocused && hits(arcadeMesh)) {
+    doFlash();
+    if (gameState === 'attract') { gameState = 'playing'; initGame(); }
+    focusArcade();
+    return;
+  }
+  if (arcadeMesh && camFocused && hits(arcadeMesh)) {
+    if (gameState === 'dead')     { gameState = 'playing'; initGame(); }
+    else if (gameState === 'win') { wave++; gameState = 'playing'; initGame(); }
+    return;
+  }
+
+  if (!camFocused) {
+    // About monitor
+    if (aboutMesh && hits(aboutMesh)) {
+      doFlash();
+      setTimeout(() => { window.location.href = 'about.html'; }, 120);
+      return;
+    }
+    // Poster
+    if (posterMesh && hits(posterMesh)) { openPosterPicker(); return; }
+    // Music box
+    if (musicMesh && hits(musicMesh)) {
+      doFlash();
+      setTimeout(() => window.open('https://www.nts.live', '_blank'), 120);
+      return;
+    }
+    // Mood / glow
+    if (glowMesh && hits(glowMesh)) { doFlash(); openMoodPrompt(); return; }
+    // Chair spin
+    if (chairMesh && hits(chairMesh)) { chairSpeed = 0.15; return; }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CHAIR SPIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+let chairSpeed = 0;
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  POSTERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const POSTERS = [
+  { label: 'DIRTY',     url: 'posters/theflyposter.jpg' },
+  { label: 'RUNNING',   url: 'posters/Running.jpg'       },
+  { label: 'LABYRINTH', url: 'posters/labyrinth.jpg'     },
+  { label: 'SHORT',     url: 'posters/shortcircuit.jpg'  },
+];
+
+const posterTextures  = [];
+const posterTexLoader = new THREE.TextureLoader();
+POSTERS.forEach(p => {
+  const tex = posterTexLoader.load(p.url);
+  tex.flipY = true;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  posterTextures.push(tex);
+});
+
+const pickerEl = document.getElementById('poster-picker');
+const thumbsEl = document.getElementById('poster-thumbs');
+
+POSTERS.forEach((poster, i) => {
+  const btn = document.createElement('button');
+  btn.innerHTML = `<img src="${poster.url}" alt="${poster.label}"><span>${poster.label}</span>`;
+  btn.addEventListener('click', () => selectPoster(i));
+  thumbsEl.appendChild(btn);
+});
+
+document.getElementById('poster-close').addEventListener('click', closePosterPicker);
+
+function selectPoster(idx) {
+  if (posterMesh) {
+    posterMesh.material.map         = posterTextures[idx];
+    posterMesh.material.needsUpdate = true;
+  }
+  thumbsEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === idx));
+}
+
+function openPosterPicker()  { closeMoodPrompt(); pickerEl.classList.add('visible'); }
+function closePosterPicker() { pickerEl.classList.remove('visible'); }
+function initPoster()        { selectPoster(0); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MOOD / PALETTE — ColorMagic API + fallbacks
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MOOD_FALLBACKS = [
+  { text: 'Neon Tokyo',   colors: ['#0d0221','#190a33','#1b0a4f','#ff2079','#0ff4c6'] },
+  { text: 'Midnight Oil', colors: ['#0a0a1a','#0e0e2c','#1a1a4e','#2244aa','#4488ff'] },
+  { text: 'Rust & Ember', colors: ['#1a0a00','#2d1200','#5c2800','#c06000','#ff9a3c'] },
+  { text: 'Deep Forest',  colors: ['#010d04','#021a08','#02330f','#055c1a','#09a32e'] },
+  { text: 'Vaporwave',    colors: ['#0d001a','#1a0033','#33004d','#cc00ff','#ff66ff'] },
+  { text: 'Arctic Dusk',  colors: ['#020a12','#061828','#0a2a44','#1a6888','#40c8e0'] },
+  { text: 'Blood Moon',   colors: ['#0f0000','#200000','#400000','#aa1100','#ff3300'] },
+  { text: 'Retro Amber',  colors: ['#0c0800','#1a1000','#332200','#886600','#ffcc00'] },
+];
+
+const glowMeshes   = []; // all Yellow_Glow meshes — tinted by mood
+
+const moodPrompt   = document.getElementById('mood-prompt');
+const moodInput    = document.getElementById('mood-input');
+const moodSubmit   = document.getElementById('mood-submit');
+const moodSwatches = document.getElementById('mood-swatches');
+const moodStatus   = document.getElementById('mood-status');
+const moodHints    = document.getElementById('mood-hints');
+
+// Build hint chips
+MOOD_FALLBACKS.forEach(f => {
+  const chip = document.createElement('button');
+  chip.textContent = f.text.split(' ')[0].toLowerCase();
+  chip.addEventListener('click', () => { moodInput.value = chip.textContent; applyMood(chip.textContent); });
+  moodHints.appendChild(chip);
+});
+
+document.getElementById('mood-close').addEventListener('click', closeMoodPrompt);
+
+document.getElementById('mood-reset').addEventListener('click', () => {
+  scene.background.set(0x020c02);
+  document.body.style.background = '#020c02';
+  ambientLight.color.set(0xffffff);
+  dirLight.color.set(0xffffff);
+  glowMeshes.forEach(m => { if (m.material.emissive) m.material.emissive.set(0xffd080); });
+  moodSwatches.innerHTML   = '';
+  moodStatus.textContent   = '// default restored';
+});
+
+moodSubmit.addEventListener('click', () => { const q = moodInput.value.trim(); if (q) applyMood(q); });
+moodInput.addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter')  { const q = moodInput.value.trim(); if (q) applyMood(q); }
+  if (e.key === 'Escape') closeMoodPrompt();
+});
+
+function openMoodPrompt()  { closePosterPicker(); moodPrompt.classList.add('visible'); setTimeout(() => moodInput.focus(), 50); }
+function closeMoodPrompt() { moodPrompt.classList.remove('visible'); moodInput.value = ''; moodStatus.textContent = ''; moodSwatches.innerHTML = ''; }
+
+function lerpSceneColors(palette) {
+  const c          = palette.colors;
+  const bgTarget   = new THREE.Color(c[0]);
+  const ambTarget  = new THREE.Color(c[2]);
+  const dirTarget  = new THREE.Color(c[3]);
+  const glowTarget = new THREE.Color(c[4]);
+
+  document.body.style.background = c[0];
+
+  let t = 0;
+  const startBg  = scene.background.clone();
+  const startAmb = ambientLight.color.clone();
+  const startDir = dirLight.color.clone();
+
+  function step() {
+    t = Math.min(t + 0.03, 1);
+    scene.background.lerpColors(startBg,  bgTarget,  t);
+    ambientLight.color.lerpColors(startAmb, ambTarget, t);
+    dirLight.color.lerpColors(startDir,  dirTarget,  t);
+    glowMeshes.forEach(m => { if (m.material.emissive) m.material.emissive.lerpColors(m.material.emissive.clone(), glowTarget, t); });
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+async function applyMood(query) {
+  moodSubmit.disabled    = true;
+  moodStatus.textContent = 'fetching_';
+  moodSwatches.innerHTML = '';
+
+  let palette;
+  try {
+    const res  = await fetch(`https://colormagic.app/api/palette/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (!data?.length) throw new Error();
+    palette = data[Math.floor(Math.random() * Math.min(data.length, 5))];
+  } catch {
+    palette = MOOD_FALLBACKS.find(f => f.text.toLowerCase().includes(query.toLowerCase()))
+           || MOOD_FALLBACKS[Math.floor(Math.random() * MOOD_FALLBACKS.length)];
+  }
+
+  moodSwatches.innerHTML = palette.colors.map(h => `<span style="background:${h}"></span>`).join('');
+  moodStatus.textContent = `// ${palette.text}`;
+  lerpSceneColors(palette);
+  moodSubmit.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SPACE INVADERS — offscreen canvas → CanvasTexture
+// ═══════════════════════════════════════════════════════════════════════════
+
+const gameCanvas = document.createElement('canvas');
+gameCanvas.width = gameCanvas.height = 512;
 const gc = gameCanvas.getContext('2d');
+const SCREEN_W = 512, SCREEN_H = 512, COLS = 11, ROWS = 5;
 
-const SCREEN_W = 512, SCREEN_H = 512;
-const COLS = 11, ROWS = 5;
-
-let gameState = 'attract';
+let gameState = 'attract', gameActive = false;
 let score = 0, lives = 3, wave = 1;
 let player, bullets, invaders, bombs, barriers, particles;
 let invaderDir, invaderSpeed, invaderDropping, invaderTick;
-let keys = {};
-let shootCooldown = 0;
-let flashTimer = 0;
-let attractAnim = 0;
+let keys = {}, shootCooldown = 0, flashTimer = 0, attractAnim = 0, lastTime = 0;
+
+const screenTexture = new THREE.CanvasTexture(gameCanvas);
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (camFocused) unfocusArcade();
+    if (moodPrompt.classList.contains('visible')) closeMoodPrompt();
+  }
+  if (!gameActive) return;
+  keys[e.key] = true;
+  if (e.key === ' ') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 function initGame() {
   if (gameState !== 'playing') { score = 0; lives = 3; wave = 1; }
@@ -197,10 +581,7 @@ function initGame() {
   bullets = []; bombs = []; particles = [];
   invaderDir = 1; invaderSpeed = 1.2 + wave * 0.3;
   invaderDropping = false; invaderTick = 0;
-  barriers = [100, 210, 310, 410].map(x => ({
-    x, y: SCREEN_H - 110,
-    blocks: Array.from({ length: 12 }, () => true),
-  }));
+  barriers = [100, 210, 310, 410].map(x => ({ x, y: SCREEN_H - 110, blocks: Array.from({ length: 12 }, () => true) }));
   invaders = [];
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
@@ -215,13 +596,11 @@ function drawInvader(x, y, row, frame, color) {
     [[0,1,0,0,0,0,0,1,0],[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[0,1,0,0,0,0,0,1,0]],
   ];
   const altCrab = [[1,0,0,0,0,0,0,0,1],[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[1,0,0,0,0,0,0,0,1]];
-  const si = row === 0 ? 0 : row < 3 ? 1 : 2;
+  const si    = row === 0 ? 0 : row < 3 ? 1 : 2;
   const shape = (si === 2 && frame === 1) ? altCrab : shapes[si];
   gc.fillStyle = color;
   const ox = x - (9 * px) / 2, oy = y - (6 * px) / 2;
-  shape.forEach((r, ri) => r.forEach((bit, ci) => {
-    if (bit) gc.fillRect(ox + ci * px, oy + ri * px, px, px);
-  }));
+  shape.forEach((r, ri) => r.forEach((bit, ci) => { if (bit) gc.fillRect(ox + ci * px, oy + ri * px, px, px); }));
 }
 
 function drawPlayer(p) {
@@ -247,24 +626,19 @@ function spawnParticles(x, y, color, count = 8) {
   }
 }
 
-let lastTime = 0;
 function tickGame(now) {
   const dt = Math.min((now - lastTime) / 16.67, 3);
   lastTime = now;
 
   gc.fillStyle = '#020c02';
   gc.fillRect(0, 0, SCREEN_W, SCREEN_H);
-  for (let y = 0; y < SCREEN_H; y += 4) {
-    gc.fillStyle = 'rgba(0,0,0,0.18)';
-    gc.fillRect(0, y, SCREEN_W, 2);
-  }
+  for (let y = 0; y < SCREEN_H; y += 4) { gc.fillStyle = 'rgba(0,0,0,0.18)'; gc.fillRect(0, y, SCREEN_W, 2); }
 
   if (gameState === 'attract') { drawAttract(now); return; }
   if (gameState === 'dead')    { drawGameOver();   return; }
   if (gameState === 'win')     { drawWin();        return; }
 
-  gc.fillStyle = '#00ff41';
-  gc.font = 'bold 13px monospace';
+  gc.fillStyle = '#00ff41'; gc.font = 'bold 13px monospace';
   gc.fillText(`SCORE  ${String(score).padStart(5,'0')}`, 14, 24);
   gc.fillText(`WAVE ${wave}`, SCREEN_W / 2 - 26, 24);
   gc.fillText('♥'.repeat(lives), SCREEN_W - 70, 24);
@@ -290,8 +664,7 @@ function tickGame(now) {
     alive.forEach(inv => inv.frame ^= 1);
     if (invaderDropping) {
       alive.forEach(inv => inv.y += 12);
-      invaderDir *= -1;
-      invaderDropping = false;
+      invaderDir *= -1; invaderDropping = false;
     } else {
       alive.forEach(inv => inv.x += 14 * invaderDir);
       if (alive.some(inv => inv.x > SCREEN_W - 30 || inv.x < 30)) invaderDropping = true;
@@ -308,22 +681,16 @@ function tickGame(now) {
     for (let inv of invaders) {
       if (!inv.alive) continue;
       if (Math.abs(b.x - inv.x) < 18 && Math.abs(b.y - inv.y) < 14) {
-        inv.alive = false;
-        score += (4 - inv.row) * 10;
+        inv.alive = false; score += (4 - inv.row) * 10;
         document.getElementById('score-hud').textContent = `SCORE: ${score}`;
-        spawnParticles(inv.x, inv.y, '#00ff41');
-        flashTimer = 3;
-        return false;
+        spawnParticles(inv.x, inv.y, '#00ff41'); flashTimer = 3; return false;
       }
     }
     for (let bar of barriers) {
-      const c = Math.floor((b.x - bar.x + 20) / 10);
-      const r = Math.floor((b.y - bar.y) / 8);
-      const idx = r * 4 + c;
+      const c = Math.floor((b.x - bar.x + 20) / 10), r = Math.floor((b.y - bar.y) / 8), idx = r * 4 + c;
       if (c >= 0 && c < 4 && r >= 0 && r < 3 && bar.blocks[idx]) { bar.blocks[idx] = false; return false; }
     }
-    gc.fillStyle = '#00ff41';
-    gc.fillRect(b.x - 1, b.y, 3, 10);
+    gc.fillStyle = '#00ff41'; gc.fillRect(b.x - 1, b.y, 3, 10);
     return true;
   });
 
@@ -331,379 +698,178 @@ function tickGame(now) {
     b.y += 3.5 * dt;
     if (b.y > SCREEN_H - 32) return false;
     if (Math.abs(b.x - player.x) < 20 && Math.abs(b.y - player.y) < 16) {
-      lives--;
-      spawnParticles(player.x, player.y, '#ff4040', 14);
-      player.x = SCREEN_W / 2;
-      if (lives <= 0) gameState = 'dead';
-      return false;
+      lives--; spawnParticles(player.x, player.y, '#ff4040', 14);
+      player.x = SCREEN_W / 2; if (lives <= 0) gameState = 'dead'; return false;
     }
     for (let bar of barriers) {
-      const c = Math.floor((b.x - bar.x + 20) / 10);
-      const r = Math.floor((b.y - bar.y) / 8);
-      const idx = r * 4 + c;
+      const c = Math.floor((b.x - bar.x + 20) / 10), r = Math.floor((b.y - bar.y) / 8), idx = r * 4 + c;
       if (c >= 0 && c < 4 && r >= 0 && r < 3 && bar.blocks[idx]) { bar.blocks[idx] = false; return false; }
     }
-    gc.fillStyle = '#ff4040';
-    gc.fillRect(b.x + Math.sin(b.y * 0.3) * 3 - 2, b.y, 4, 10);
+    gc.fillStyle = '#ff4040'; gc.fillRect(b.x + Math.sin(b.y * 0.3) * 3 - 2, b.y, 4, 10);
     return true;
   });
 
-  if (invaders.every(i => !i.alive)) { gameState = 'win'; return; }
-  if (alive.some(inv => inv.y > SCREEN_H - 60)) { lives = 0; gameState = 'dead'; }
+  if (invaders.every(i => !i.alive))              { gameState = 'win'; return; }
+  if (alive.some(inv => inv.y > SCREEN_H - 60))   { lives = 0; gameState = 'dead'; }
 
   particles = particles.filter(p => {
     p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.04;
     if (p.life <= 0) return false;
-    gc.globalAlpha = p.life;
-    gc.fillStyle = p.color;
-    gc.fillRect(p.x - 2, p.y - 2, 4, 4);
-    gc.globalAlpha = 1;
+    gc.globalAlpha = p.life; gc.fillStyle = p.color;
+    gc.fillRect(p.x - 2, p.y - 2, 4, 4); gc.globalAlpha = 1;
     return true;
   });
 
   barriers.forEach(b => drawBarrier(b));
-  const invColors = ['#ff4040', '#ffb000', '#ffb000', '#00ff41', '#00ff41'];
+  const invColors = ['#ff4040','#ffb000','#ffb000','#00ff41','#00ff41'];
   invaders.forEach(inv => { if (inv.alive) drawInvader(inv.x, inv.y, inv.row, inv.frame, invColors[inv.row]); });
 
   flashTimer = Math.max(0, flashTimer - dt);
   player.color = (flashTimer > 0 && Math.floor(flashTimer) % 2 === 1) ? '#ff4040' : '#00ff41';
   drawPlayer(player);
-
-  gc.strokeStyle = 'rgba(0,255,65,0.1)'; gc.lineWidth = 8;
-  gc.strokeRect(0, 0, SCREEN_W, SCREEN_H);
+  gc.strokeStyle = 'rgba(0,255,65,0.1)'; gc.lineWidth = 8; gc.strokeRect(0, 0, SCREEN_W, SCREEN_H);
 }
 
 function drawAttract(now) {
   attractAnim += 0.02;
   gc.textAlign = 'center';
-  gc.fillStyle = '#00ff41'; gc.font = 'bold 26px monospace';
-  gc.fillText('SPACE INVADERS', SCREEN_W / 2, 90);
-  gc.font = '11px monospace'; gc.fillStyle = '#00b32c';
-  gc.fillText('← →  MOVE     SPACE  SHOOT', SCREEN_W / 2, 120);
-  [[0, SCREEN_W/2 - 70], [2, SCREEN_W/2], [4, SCREEN_W/2 + 70]].forEach(([row, x]) => {
+  gc.fillStyle = '#00ff41'; gc.font = 'bold 26px monospace'; gc.fillText('SPACE INVADERS', SCREEN_W / 2, 90);
+  gc.font = '11px monospace'; gc.fillStyle = '#00b32c'; gc.fillText('← →  MOVE     SPACE  SHOOT', SCREEN_W / 2, 120);
+  [[0, SCREEN_W/2 - 70],[2, SCREEN_W/2],[4, SCREEN_W/2 + 70]].forEach(([row, x]) => {
     drawInvader(x, 200 + Math.sin(attractAnim + x * 0.01) * 10, row, Math.floor(attractAnim * 2) % 2, ['#ff4040','#ffb000','#00ff41'][[0,2,4].indexOf(row)]);
   });
-  if (Math.floor(now / 600) % 2 === 0) {
-    gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
-    gc.fillText('[ CLICK SCREEN TO START ]', SCREEN_W / 2, 310);
-  }
+  if (Math.floor(now / 600) % 2 === 0) { gc.fillStyle = '#00ff41'; gc.font = '14px monospace'; gc.fillText('[ CLICK SCREEN TO START ]', SCREEN_W / 2, 310); }
   gc.textAlign = 'left';
 }
 
 function drawGameOver() {
   gc.textAlign = 'center';
-  gc.fillStyle = '#ff4040'; gc.font = 'bold 28px monospace';
-  gc.fillText('GAME OVER', SCREEN_W / 2, 200);
-  gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
-  gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
+  gc.fillStyle = '#ff4040'; gc.font = 'bold 28px monospace'; gc.fillText('GAME OVER', SCREEN_W / 2, 200);
+  gc.fillStyle = '#00ff41'; gc.font = '14px monospace'; gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
   if (Math.floor(Date.now() / 600) % 2 === 0) gc.fillText('[ CLICK TO RETRY ]', SCREEN_W / 2, 285);
   gc.textAlign = 'left';
 }
 
 function drawWin() {
   gc.textAlign = 'center';
-  gc.fillStyle = '#ffb000'; gc.font = 'bold 24px monospace';
-  gc.fillText('WAVE CLEARED!', SCREEN_W / 2, 200);
-  gc.fillStyle = '#00ff41'; gc.font = '14px monospace';
-  gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
+  gc.fillStyle = '#ffb000'; gc.font = 'bold 24px monospace'; gc.fillText('WAVE CLEARED!', SCREEN_W / 2, 200);
+  gc.fillStyle = '#00ff41'; gc.font = '14px monospace'; gc.fillText(`SCORE: ${score}`, SCREEN_W / 2, 240);
   if (Math.floor(Date.now() / 600) % 2 === 0) gc.fillText('[ CLICK FOR NEXT WAVE ]', SCREEN_W / 2, 285);
   gc.textAlign = 'left';
 }
 
-let gameActive = false;
-window.addEventListener('keydown', e => {
-  if (!gameActive) return;
-  keys[e.key] = true;
-  if (e.key === ' ') e.preventDefault();
-});
-window.addEventListener('keyup', e => { keys[e.key] = false; });
-
-const POSTERS = [
-  { label: 'DIRTY', url: 'posters/Dirty_Dancing.jpg' },
-  { label: 'RUNNING',   url: 'posters/Running.jpg'     },
-  { label: 'LABYRINTH',   url: 'posters/labyrinth.jpg' },
-  { label: 'SHORT',   url: 'posters/shortcircuit.jpg' },
-];
-
-let posterMesh    = null;
-let currentPoster = 0;
-const posterTextures = [];
-const posterTexLoader = new THREE.TextureLoader();
-
-// Pre-load all textures
-POSTERS.forEach((p, i) => {
-  const tex = posterTexLoader.load(p.url);
-  tex.flipY = true;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  posterTextures.push(tex);
-});
-
-const pickerEl       = document.getElementById('poster-picker');
-const thumbsEl       = document.getElementById('poster-thumbs');
-const tooltipPoster  = document.getElementById('tooltip-poster');
-
-// Build thumbnail buttons
-POSTERS.forEach((poster, i) => {
-  const btn = document.createElement('button');
-  btn.innerHTML = `<img src="${poster.url}" alt="${poster.label}"><span>${poster.label}</span>`;
-  btn.addEventListener('click', () => selectPoster(i));
-  thumbsEl.appendChild(btn);
-});
-
-document.getElementById('poster-close').addEventListener('click', closePosterPicker);
-
-function selectPoster(idx) {
-  currentPoster = idx;
-  if (posterMesh) {
-    posterMesh.material.map          = posterTextures[idx];
-    posterMesh.material.needsUpdate  = true;
-  }
-  thumbsEl.querySelectorAll('button').forEach((b, i) => {
-    b.classList.toggle('active', i === idx);
-  });
-}
-
-function openPosterPicker()  { pickerEl.classList.add('visible');    }
-function closePosterPicker() { pickerEl.classList.remove('visible'); }
-
-// Init with first poster once scene is ready
-function initPoster() { selectPoster(0); }
-
 // ═══════════════════════════════════════════════════════════════════════════
-//  THREE.JS
+//  LOAD GLTF
 // ═══════════════════════════════════════════════════════════════════════════
 
-const threeCanvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.outputEncoding      = THREE.sRGBEncoding;
-renderer.toneMapping         = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.9;
-
-const scene  = new THREE.Scene();
-window.scene = scene; // to allow console access for debugging
-scene.background = new THREE.Color(0x020c02);
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(8, 5, 12);
-
-const controls = new OrbitControls(camera, threeCanvas);
-controls.enableDamping   = true;
-controls.target.set(0, 1, 0);
-controls.minAzimuthAngle = -Math.PI / 2;
-controls.maxAzimuthAngle =  Math.PI / 2;
-controls.minPolarAngle   =  Math.PI / 6;
-controls.maxPolarAngle   =  Math.PI / 2;
-controls.minDistance     =  4;
-controls.maxDistance     =  20;
-
-scene.add(new THREE.AmbientLight(0xffffff, 1));
-const dir = new THREE.DirectionalLight(0xffffff, 2);
-dir.position.set(5, 8, 5);
-scene.add(dir);
-
-// ── CanvasTexture ─────────────────────────────────────────────────────────
-const screenTexture = new THREE.CanvasTexture(gameCanvas);
-
-// ── Camera transition state ───────────────────────────────────────────────
-// camTransition = true ONLY while flying. Stops lerping once arrived
-// so OrbitControls can work freely without being fought by the lerp.
-const camArcade = {
-  position: new THREE.Vector3(3.071, 3.370, 3.191), // placeholder — overwritten by setCamArcade()
-  target:   new THREE.Vector3(-0.895, 3.166, 2.712),
-};
-const camDefault = {
-  position: new THREE.Vector3(8, 5, 12),
-  target:   new THREE.Vector3(0, 1, 0),
-};
-let camFocused    = false;
-let camTransition = false;
-
-function focusArcade() {
-  camFocused    = true;
-  camTransition = true;
-  controls.enabled = false;
-  gameActive = true;
-  document.getElementById('game-hud').classList.add('visible');
-}
-
-function unfocusArcade() {
-  camFocused    = false;
-  camTransition = true;
-  gameActive    = false;
-  controls.enabled = false; // stays off until tween finishes
-  document.getElementById('game-hud').classList.remove('visible');
-  keys = {};
-}
-
-// ── Console helpers ───────────────────────────────────────────────────────
-// 1. List every mesh name + material in the loaded scene:
-//    scene.traverse(c => c.isMesh && console.log(c.name, c.material?.name))
-//
-// 2. Orbit to your ideal arcade angle, then run setCamArcade() — it prints
-//    the exact lines to paste into camArcade above.
-window.setCamArcade = () => {
-  const p = camera.position, t = controls.target;
-  console.log('📋 Paste into camArcade:');
-  console.log(`camArcade.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});`);
-  console.log(`camArcade.target.set(${t.x.toFixed(3)}, ${t.y.toFixed(3)}, ${t.z.toFixed(3)});`);
-};
-
-// ── Raycaster ─────────────────────────────────────────────────────────────
-const raycaster = new THREE.Raycaster();
-const mouse     = new THREE.Vector2();
-
-// Two meshes, two tooltips — completely independent
-let arcadeMesh   = null;  // Object_10 — Arcade_screen
-let projectsMesh = null;  // Object_140 — Screen-nc (the monitor)
-
-const tooltipArcade   = document.getElementById('tooltip-arcade');
-const tooltipProjects = document.getElementById('tooltip-projects');
-
-window.addEventListener('mousemove', e => {
-  mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-});
-
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && camFocused) unfocusArcade();
-});
-
-threeCanvas.addEventListener('click', () => {
-  raycaster.setFromCamera(mouse, camera);
-
-  const flash = document.getElementById('click-flash');
-  const doFlash = () => {
-    flash.style.transition = 'none';
-    flash.style.opacity = '0.35';
-    setTimeout(() => { flash.style.transition = 'opacity 0.3s'; flash.style.opacity = '0'; }, 60);
-  };
-
-  // ── Arcade click
-  if (arcadeMesh && !camFocused) {
-    const hit = raycaster.intersectObject(arcadeMesh, true);
-    if (hit.length > 0) {
-      doFlash();
-      if (gameState === 'attract') { gameState = 'playing'; initGame(); }
-      focusArcade();
-      return;
-    }
-  }
-
-  // ── Arcade in-game state transitions (dead/win)
-  if (arcadeMesh && camFocused) {
-    const hit = raycaster.intersectObject(arcadeMesh, true);
-    if (hit.length > 0) {
-      if (gameState === 'dead')     { gameState = 'playing'; initGame(); }
-      else if (gameState === 'win') { wave++; gameState = 'playing'; initGame(); }
-      return;
-    }
-  }
-
-  // ── Projects monitor click
-  if (projectsMesh && !camFocused) {
-    const hit = raycaster.intersectObject(projectsMesh, true);
-    if (hit.length > 0) {
-      doFlash();
-      setTimeout(() => { window.location.href = 'projects.html'; }, 120);
-    }
-  }
-
-  // ── Poster click — opens picker
-if (posterMesh && !camFocused) {
-  const hit = raycaster.intersectObject(posterMesh, true);
-  if (hit.length > 0) {
-    openPosterPicker();
-    return;
-  }
-}
-});
-
-// ── Load GLTF ─────────────────────────────────────────────────────────────
 new GLTFLoader().load(
   'scene.gltf',
-  (gltf) => {
+  gltf => {
     scene.add(gltf.scene);
 
     gltf.scene.traverse(child => {
+      // ── Chair group (not a mesh — must check before the isMesh guard)
+      if (child.name === 'Chair_10') {
+        chairMesh = child;
+        console.log('✅ Chair group:', child.name);
+      }
+
       if (!child.isMesh) return;
 
-      // Arcade screen — gets the Space Invaders canvas texture
-      if (child.name === 'Object_10') {
-        arcadeMesh = child;
-        child.material = new THREE.MeshStandardMaterial({
-          map:               screenTexture,
-          emissiveMap:       screenTexture,
-          emissive:          new THREE.Color(0xffffff),
-          emissiveIntensity: 1.4,
-          roughness:         0.3,
-          metalness:         0.0,
-        });
-        console.log('✅ Arcade mesh:', child.name);
-        console.log('ℹ️  Orbit to a good angle then run setCamArcade() in the console.');
+      // ── Mesh assignments
+      switch (child.name) {
+        case 'Object_10':
+          arcadeMesh = child;
+          child.material = new THREE.MeshStandardMaterial({
+            map: screenTexture, emissiveMap: screenTexture,
+            emissive: new THREE.Color(0xffffff), emissiveIntensity: 1.4,
+            roughness: 0.3, metalness: 0.0,
+          });
+          console.log('✅ Arcade:', child.name);
+          break;
+        case 'Object_140': aboutMesh  = child; console.log('✅ About:',  child.name); break;
+        case 'Object_102': posterMesh = child; console.log('✅ Poster:', child.name); break;
+        case 'Object_108': musicMesh  = child; console.log('✅ Music:',  child.name); break;
+        case 'Object_90':  glowMesh   = child; console.log('✅ Glow:',   child.name); break;
+
+        case 'Object_99':
+  const fixedTex = new THREE.TextureLoader().load('posters/Dirty_Dancing.jpg');
+  fixedTex.flipY = true;
+  fixedTex.colorSpace = THREE.SRGBColorSpace;
+  child.material.map = fixedTex;
+  child.material.needsUpdate = true;
+  console.log('✅ Fixed poster:', child.name);
+  break;
       }
 
-      // Projects monitor — clickable, navigates to projects.html
-      if (child.name === 'Object_140') {
-        projectsMesh = child;
-        console.log('✅ Projects monitor mesh:', child.name);
-      }
-
-      
-if (child.name === 'Object_102') { 
-  posterMesh = child;
-  // Keep its original material — selectPoster() will set the map
-  console.log('✅ Poster mesh:', child.name, '| mat:', child.material?.name);
-}
+      if (child.material?.name === 'Yellow_Glow') glowMeshes.push(child);
     });
 
-    if (!arcadeMesh)   console.warn('⚠️  Arcade mesh (Object_10) not found.');
-    if (!projectsMesh) console.warn('⚠️  Projects mesh (Object_140) not found.');
-    if (!posterMesh)   console.warn('⚠️  Poster mesh not found — check name in traverse.');
-initPoster(); // ← add this
-    console.log('Debug: scene.traverse(c => c.isMesh && console.log(c.name, c.material?.name))');
+    if (!arcadeMesh) console.warn('⚠️  Arcade mesh (Object_10) not found.');
+    if (!aboutMesh)  console.warn('⚠️  About mesh (Object_140) not found.');
+    if (!posterMesh) console.warn('⚠️  Poster mesh (Object_102) not found.');
+    if (!musicMesh)  console.warn('⚠️  Music mesh (Object_108) not found.');
+    if (!glowMesh)   console.warn('⚠️  Glow mesh (Object_90) not found.');
+    if (!chairMesh)  console.warn('⚠️  Chair group (Chair_10) not found.');
+    console.log(`ℹ️  ${glowMeshes.length} Yellow_Glow meshes registered.`);
+
+    initPoster();
   },
   p => console.log(`Loading ${Math.round(p.loaded / p.total * 100)}%`),
   e => console.error(e)
 );
+// ═══════════════════════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════════════════════════
 
-// ── Render loop ───────────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
 
+  // Game tick
   tickGame(performance.now());
   screenTexture.needsUpdate = true;
 
-  // Lerp only while transitioning — stops the moment we arrive
+  // Camera transition
   if (camTransition) {
     const dest = camFocused ? camArcade : camDefault;
     camera.position.lerp(dest.position, 0.07);
     controls.target.lerp(dest.target,   0.07);
-
     if (camera.position.distanceTo(dest.position) < 0.02) {
       camera.position.copy(dest.position);
       controls.target.copy(dest.target);
       camTransition = false;
-      if (!camFocused) controls.enabled = true; // restore orbit after fly-back
+      if (!camFocused) controls.enabled = true;
     }
   }
 
-  // Hover — only check when free-roaming (not focused, not mid-tween)
+  // Chair spin
+  if (chairMesh && chairSpeed > 0) {
+    chairMesh.rotation.y += chairSpeed;
+    chairSpeed *= 0.97;
+    if (chairSpeed < 0.001) chairSpeed = 0;
+  }
+
+  // Hover tooltips
   if (!camFocused && !camTransition) {
     raycaster.setFromCamera(mouse, camera);
 
-    const hitArcade   = arcadeMesh   ? raycaster.intersectObject(arcadeMesh,   true).length > 0 : false;
-const hitProjects = projectsMesh ? raycaster.intersectObject(projectsMesh, true).length > 0 : false;
-const hitPoster   = posterMesh   ? raycaster.intersectObject(posterMesh,   true).length > 0 : false;
+    const hitArcade = hits(arcadeMesh);
+    const hitAbout  = hits(aboutMesh);
+    const hitPoster = hits(posterMesh);
+    const hitMusic  = hits(musicMesh);
+    const hitGlow   = hits(glowMesh);
+    const hitChair  = hits(chairMesh);
 
-tooltipArcade.classList.toggle('visible',   hitArcade);
-tooltipProjects.classList.toggle('visible', hitProjects);
-tooltipPoster.classList.toggle('visible',   hitPoster && !pickerEl.classList.contains('visible'));
-threeCanvas.style.cursor = (hitArcade || hitProjects || hitPoster) ? 'pointer' : 'default';
+    tooltipArcade.classList.toggle('visible', hitArcade);
+    tooltipAbout.classList.toggle('visible',  hitAbout);
+    tooltipPoster.classList.toggle('visible', hitPoster && !pickerEl.classList.contains('visible'));
+    tooltipMusic.classList.toggle('visible',  hitMusic);
+    tooltipGlow.classList.toggle('visible',   hitGlow   && !moodPrompt.classList.contains('visible'));
+    tooltipChair.classList.toggle('visible',  hitChair);
+
+    threeCanvas.style.cursor = (hitArcade || hitAbout || hitPoster || hitMusic || hitGlow || hitChair) ? 'pointer' : 'default';
   } else {
-    tooltipArcade.classList.remove('visible');
-    tooltipProjects.classList.remove('visible');
+    allTooltips.forEach(t => t.classList.remove('visible'));
     threeCanvas.style.cursor = 'default';
   }
 
@@ -713,12 +879,22 @@ threeCanvas.style.cursor = (hitArcade || hitProjects || hitPoster) ? 'pointer' :
 
 animate();
 initGame();
+// ── Intro hint
+const hintEl = document.getElementById('hint');
+const hintText = '// drag and explore the room';
+let hintIdx = 0;
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+const hintType = setInterval(() => {
+  hintEl.textContent = hintText.slice(0, ++hintIdx);
+  if (hintIdx >= hintText.length) clearInterval(hintType);
+}, 45);
+
+// fade out on first interaction
+function dismissHint() {
+  hintEl.classList.add('gone');
+  threeCanvas.removeEventListener('pointerdown', dismissHint);
+}
+threeCanvas.addEventListener('pointerdown', dismissHint);
 </script>
 </body>
 </html>
