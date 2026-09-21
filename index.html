@@ -31,6 +31,44 @@
     #tooltip-about { bottom: 72px; }
     #tooltip-glow  { bottom: 72px; }
 
+    /* ── Sparkle hints on clickable objects ── */
+    .spark {
+      position: fixed;
+      left: 0; top: 0;
+      width: 26px; height: 26px;
+      margin: -13px 0 0 -13px;
+      pointer-events: none;
+      z-index: 8;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    .spark.visible { opacity: 1; }
+    .spark i {
+      position: absolute; inset: 0;
+      background: #00ff41;
+      clip-path: polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%,
+                         50% 100%, 42% 58%, 0% 50%, 42% 42%);
+      filter: drop-shadow(0 0 6px rgba(0,255,65,0.85));
+      animation: twinkle 2.4s ease-in-out infinite;
+      animation-delay: var(--d, 0s);
+    }
+    .spark::after {
+      content: '';
+      position: absolute; inset: 3px;
+      border: 1px solid #00ff41;
+      border-radius: 50%;
+      animation: ripple 2.4s ease-out infinite;
+      animation-delay: var(--d, 0s);
+    }
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.5) rotate(0deg);  opacity: 0.5; }
+      50%      { transform: scale(1)   rotate(90deg); opacity: 1;   }
+    }
+    @keyframes ripple {
+      0%        { transform: scale(0.4); opacity: 0.8; }
+      70%, 100% { transform: scale(2);   opacity: 0;   }
+    }
+
     /* ── Vignette ── */
     #vignette {
       position: fixed; inset: 0;
@@ -389,6 +427,99 @@ threeCanvas.addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 let chairSpeed = 0;
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SPARKLE HINTS — one per tooltip, placed where the pointer would turn
+//  into a hand.
+//
+//  How a position is found (every 3rd frame):
+//    1. Take the object's CURRENT world bounding box. updateWorldMatrix is
+//       called first — without it, three.js hasn't computed the transforms
+//       yet and every position comes out wrong.
+//    2. Try a few points inside that box, centre first. Project each one to
+//       a screen pixel.
+//    3. Raycast from the camera through that pixel against the object, with
+//       the same intersectObject(mesh, true) call hits() uses for hovering.
+//    4. First pixel that hits = the sparkle goes on that surface point.
+//       If nothing hits, the object isn't visible and the sparkle hides.
+//  Between refreshes the stored point is re-projected every frame, so the
+//  sparkle follows smoothly while you orbit.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const sparks     = [];
+const _sparkBox  = new THREE.Box3();
+const _sparkCtr  = new THREE.Vector3();
+const _sparkSize = new THREE.Vector3();
+const _sparkP    = new THREE.Vector3();
+const _sparkNdc  = new THREE.Vector2();
+let   sparkFrame = 0;
+
+// Probe points as fractions of the bounding box — centre first, so the
+// sparkle prefers the middle of the object.
+const SPARK_PROBES = [[0, 0, 0]];
+for (const f of [0.25, 0.4]) {
+  for (const [x, y, z] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1],
+                           [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0]]) {
+    SPARK_PROBES.push([x * f, y * f, z * f]);
+  }
+}
+
+function addSpark(object, label) {
+  if (!object) { console.warn(`⚠️  Spark "${label}" skipped — object not found.`); return; }
+  const el = document.createElement('div');
+  el.className = 'spark';
+  el.style.setProperty('--d', `${sparks.length * 0.35}s`);
+  el.innerHTML = '<i></i>';
+  document.body.appendChild(el);
+  sparks.push({ object, label, el, point: new THREE.Vector3(), onSurface: false });
+}
+
+function findSparkPoint(s) {
+  s.object.updateWorldMatrix(true, true);
+  _sparkBox.setFromObject(s.object);
+  _sparkBox.getCenter(_sparkCtr);
+  _sparkBox.getSize(_sparkSize);
+
+  for (const [fx, fy, fz] of SPARK_PROBES) {
+    _sparkP.set(
+      _sparkCtr.x + _sparkSize.x * fx,
+      _sparkCtr.y + _sparkSize.y * fy,
+      _sparkCtr.z + _sparkSize.z * fz,
+    ).project(camera);
+    if (_sparkP.z > 1 || Math.abs(_sparkP.x) > 1 || Math.abs(_sparkP.y) > 1) continue;
+
+    _sparkNdc.set(_sparkP.x, _sparkP.y);
+    raycaster.setFromCamera(_sparkNdc, camera);
+    const hit = raycaster.intersectObject(s.object, true)[0];   // same test as hits()
+    if (hit) { s.point.copy(hit.point); return true; }
+  }
+  return false;
+}
+
+function updateSparks(show, hovered) {
+  const refresh = sparkFrame++ % 3 === 0;
+
+  for (const s of sparks) {
+    if (show && refresh) s.onSurface = findSparkPoint(s);
+
+    const visible = show && s.onSurface && s.object !== hovered;
+    if (visible) {
+      _sparkP.copy(s.point).project(camera);
+      s.el.style.left = `${( _sparkP.x * 0.5 + 0.5) * window.innerWidth}px`;
+      s.el.style.top  = `${(-_sparkP.y * 0.5 + 0.5) * window.innerHeight}px`;
+    }
+    s.el.classList.toggle('visible', visible);
+  }
+}
+
+// Console check: sparkReport() lists every sparkle and whether it found a surface.
+window.sparkReport = () => {
+  console.log(`— ${sparks.length} sparks registered —`);
+  for (const s of sparks) {
+    const ok = findSparkPoint(s);
+    console.log(`${s.label.padEnd(7)} | onSurface: ${ok ? 'yes' : 'NO'}`);
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  POSTERS
@@ -802,6 +933,14 @@ new GLTFLoader().load(
     console.log(`ℹ️  ${glowMeshes.length} Yellow_Glow meshes registered.`);
 
     initPoster();
+
+    // One sparkle per tooltip — same objects the hover code tests
+    addSpark(arcadeMesh, 'arcade');
+    addSpark(aboutMesh,  'about');
+    addSpark(posterMesh, 'poster');
+    addSpark(musicMesh,  'music');
+    addSpark(glowMesh,   'glow');
+    addSpark(chairMesh,  'chair');
   },
   p => console.log(`Loading ${Math.round(p.loaded / p.total * 100)}%`),
   e => console.error(e)
@@ -856,9 +995,17 @@ function animate() {
     tooltipChair.classList.toggle('visible',  hitChair);
 
     threeCanvas.style.cursor = (hitArcade || hitAbout || hitPoster || hitMusic || hitGlow || hitChair) ? 'pointer' : 'default';
+
+    // Sparkles — runs after the hover tests so it doesn't disturb them.
+    // The hovered object's sparkle hides while its tooltip is showing.
+    const hovered = hitArcade ? arcadeMesh : hitAbout ? aboutMesh :
+                    hitPoster ? posterMesh : hitMusic ? musicMesh :
+                    hitGlow   ? glowMesh   : hitChair ? chairMesh : null;
+    updateSparks(true, hovered);
   } else {
     allTooltips.forEach(t => t.classList.remove('visible'));
     threeCanvas.style.cursor = 'default';
+    updateSparks(false, null);
   }
 
   controls.update();
