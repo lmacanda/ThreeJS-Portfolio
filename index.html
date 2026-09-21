@@ -152,6 +152,15 @@
       font-size: 16px; cursor: pointer; font-family: monospace; line-height: 1;
     }
     #poster-close:hover { color: #00ff41; }
+    #cat-row { display: flex; align-items: center; gap: 10px; }
+    #cat-btn {
+      background: transparent; border: 1px solid #00b32c; color: #00b32c;
+      font-family: monospace; font-size: 0.6rem; letter-spacing: 0.2em;
+      padding: 4px 10px; cursor: pointer; text-transform: uppercase;
+    }
+    #cat-btn:hover    { border-color: #00ff41; color: #00ff41; }
+    #cat-btn:disabled { opacity: 0.3; cursor: default; }
+    #cat-status { color: #00b32c; font-size: 0.58rem; letter-spacing: 0.2em; min-width: 90px; }
 
     /* ── Mood prompt ── */
     #mood-prompt {
@@ -240,6 +249,10 @@
   <button id="poster-close">[x]</button>
   <p>// select poster</p>
   <div id="poster-thumbs"></div>
+  <div id="cat-row">
+    <button id="cat-btn">[ random cat ]</button>
+    <span id="cat-status"></span>
+  </div>
 </div>
 
 <!-- Mood prompt -->
@@ -418,7 +431,7 @@ threeCanvas.addEventListener('click', () => {
     if (posterMesh && hits(posterMesh)) { openPosterPicker(); return; }
     if (musicMesh  && hits(musicMesh))  { doFlash(); setTimeout(() => window.open('https://www.nts.live', '_blank'), 120); return; }
     if (glowMesh   && hits(glowMesh))   { doFlash(); openMoodPrompt(); return; }
-    if (chairMesh  && hits(chairMesh))  { chairSpeed = 0.15; return; }
+    if (chairMesh  && hits(chairMesh))  { toggleChairSpin(); return; }
   }
 });
 
@@ -426,7 +439,18 @@ threeCanvas.addEventListener('click', () => {
 //  CHAIR SPIN
 // ═══════════════════════════════════════════════════════════════════════════
 
-let chairSpeed = 0;
+// Click toggles an endless spin. Speed eases toward the target each frame,
+// so the chair winds up smoothly and coasts to a stop when turned off.
+const CHAIR_MAX_SPEED = 0.15;   // radians per frame at full spin (~1 turn every 1.7s at 60fps)
+const CHAIR_EASE      = 1;   // how quickly it speeds up / slows down (0–1, higher = snappier)
+
+let chairSpinning = false;      // set to true to have it spinning from page load
+let chairSpeed    = 0;
+
+function toggleChairSpin() {
+  chairSpinning = !chairSpinning;
+  tooltipChair.textContent = chairSpinning ? '[ CLICK TO STOP ]' : '[ CLICK TO SPIN ]';
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  SPARKLE HINTS — one per tooltip, placed where the pointer would turn
@@ -563,7 +587,110 @@ function selectPoster(idx) {
 
 function openPosterPicker()  { closeMoodPrompt(); pickerEl.classList.add('visible'); }
 function closePosterPicker() { pickerEl.classList.remove('visible'); }
-function initPoster()        { selectPoster(0); }
+
+// ── Random cats from cataas.com ────────────────────────────────────────────
+// The cat is drawn onto a poster-shaped canvas, scaled to fit, on a black
+// background — so the whole cat is always visible.
+
+const CAT_URL        = 'https://cataas.com/cat/cute';
+const START_WITH_CAT = true;    // show a cat on page load instead of a local poster
+const CAT_TIMEOUT    = 5000;    // ms to wait for the first cat before falling back to a local poster
+const POSTER_ASPECT  = 2 / 3;   // poster width ÷ height — tweak if the cat looks squashed
+const POSTER_BG      = '#050505';  // background around the cat
+
+const catBtn       = document.getElementById('cat-btn');
+const catStatus    = document.getElementById('cat-status');
+const catImgLoader = new THREE.ImageLoader().setCrossOrigin('anonymous');
+let   catTexture   = null;
+
+// cataas image type: 'medium' on larger screens, 'small' on phones and
+// small windows, where the poster is too small on screen to need more.
+const CAT_SMALL_BELOW = 768;   // window width in px below which 'small' is used
+
+function catType() {
+  return window.innerWidth < CAT_SMALL_BELOW ? 'small' : 'medium';
+}
+
+function catUrl() {
+  return `${CAT_URL}?type=${catType()}&t=${Date.now()}`;   // timestamp stops the browser serving a cached cat
+}
+
+// Start fetching the first cat right away, in parallel with the 3D model,
+// so it's usually ready by the time the room appears. Resolves to the image,
+// or to null if the request fails.
+const firstCat = START_WITH_CAT
+  ? new Promise(resolve => catImgLoader.load(catUrl(), resolve, undefined, () => resolve(null)))
+  : Promise.resolve(null);
+
+// Poster-shaped canvas filled with the background colour. With an image,
+// the image is drawn centred on it, scaled to fit.
+function posterCanvas(img) {
+  const H = 1024, W = Math.round(H * POSTER_ASPECT);
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = POSTER_BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (img) {
+    const scale = Math.min(W / img.width, H / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.flipY      = true;             // same orientation as your local posters
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function applyCat(img) {
+  const tex = posterCanvas(img);
+  if (catTexture) catTexture.dispose();   // free the previous cat
+  catTexture = tex;
+
+  posterMesh.material.map         = tex;
+  posterMesh.material.needsUpdate = true;
+  thumbsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  catStatus.textContent = '// meow';
+}
+
+// Button: fetch a new cat. On failure, whatever poster is showing stays put.
+function loadRandomCat() {
+  if (!posterMesh) return;
+  catBtn.disabled = true;
+  catStatus.textContent = 'fetching_';
+
+  catImgLoader.load(
+    catUrl(),
+    img => { applyCat(img); catBtn.disabled = false; },
+    undefined,
+    () => { catStatus.textContent = '// no cat, try again'; catBtn.disabled = false; }
+  );
+}
+
+catBtn.addEventListener('click', loadRandomCat);
+
+async function initPoster() {
+  if (!posterMesh) return;
+
+  if (!START_WITH_CAT) { selectPoster(0); return; }
+
+  // Poster stays plain black until the cat arrives — never a local poster first.
+  const empty = posterCanvas(null);
+  posterMesh.material.map         = empty;
+  posterMesh.material.needsUpdate = true;
+
+  const img = await Promise.race([
+    firstCat,
+    new Promise(resolve => setTimeout(() => resolve(null), CAT_TIMEOUT)),
+  ]);
+
+  empty.dispose();
+  if (img) applyCat(img);
+  else     selectPoster(0);             // API down or too slow → local poster
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  MOOD / PALETTE — ColorMagic API + fallbacks
@@ -969,11 +1096,15 @@ function animate() {
     }
   }
 
-  // Chair spin
-  if (chairMesh && chairSpeed > 0) {
-    chairMesh.rotation.y += chairSpeed;
-    chairSpeed *= 0.97;
-    if (chairSpeed < 0.001) chairSpeed = 0;
+  // Chair spin — eases toward full speed while spinning, toward zero when stopped
+  if (chairMesh) {
+    const target = chairSpinning ? CHAIR_MAX_SPEED : 0;
+    chairSpeed += (target - chairSpeed) * CHAIR_EASE;
+    if (!chairSpinning && chairSpeed < 0.0005) chairSpeed = 0;
+
+    if (chairSpeed > 0) {
+      chairMesh.rotation.y = (chairMesh.rotation.y + chairSpeed) % (Math.PI * 2);
+    }
   }
 
   // Hover tooltips

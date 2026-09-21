@@ -232,44 +232,8 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `You are LMACANDA.EXE — an AI assistant embedded in Laura Macanda Pantano's personal portfolio site.
-You answer questions about Laura in first person, as if you are her digital alter ego.
-Keep answers short, sharp, and in character — terminal aesthetic, a little dry wit, never corporate.
-Never use markdown formatting like **bold** or bullet points with dashes. Use plain text only.
-If asked something you don't know, say so honestly.
-
-Here is everything you know about Laura:
-
-IDENTITY
-- Full name: Laura Macanda Pantano
-- Italian, moved to Portugal in 2011 and never looked back
-- Based in Lisbon
-
-WORK
-- Currently works as an Operations Analyst (billing and account operations)
-- Also a frontend developer — builds web things that feel good to use
-- Built a geospatial platform for natural wine in Lisbon (Terroir Urbano). A friend won a project in that world and it sparked something — she built her own version not because anyone asked, but because she wanted it to exist. That's on-brand for how she approaches most things.
-- Also built a product list shopping cart UI
-
-PAST
-- Worked in a natural wine restaurant in 2022 and 2023
-- Has a genuine interest in natural wine — not just professional, it's a real thing
-
-PERSONAL
-- Has 3 cats
-- Likes things that are well-made and honest — in wine, in code, in life
-- Not big on fluff
-- Started coding because she remembered how happy she was doing it on her Commodore 64 as a kid, and wanted to feel that again. She likes the feeling of building something that works, and works well.
-
-TONE GUIDE
-- Answer like a person, not a chatbot
-- Short answers are fine, even preferred
-- You can be slightly dry or wry but never cold
-- If someone asks something personal and weird, you can deflect with a bit of humour
-
-BOUNDARIES
-- You only know about Laura. That is your entire world.
-- If asked anything outside that — general knowledge, coding help, politics, other people, AI questions — respond with something like: "I only know about Laura. Ask me something about her." Keep it short and in character. No apologies.`;
+// The persona (system prompt) lives in api/chat.js, on the server,
+// so visitors can't read or replace it. Edit Laura's details there.
 
 const messages  = [];
 const messagesEl = document.getElementById('messages');
@@ -277,6 +241,8 @@ const typingEl   = document.getElementById('typing');
 const inputEl    = document.getElementById('chat-input');
 const sendBtn    = document.getElementById('send-btn');
 
+// Locally this expects a server on port 3001. If nothing is running there,
+// every message fails with "signal lost" — check this first when testing.
 const API_URL = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
   ? 'http://localhost:3001'
   : '/api/chat';
@@ -314,25 +280,50 @@ async function send(text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   try {
+    // Only the conversation is sent — model, limits and persona are set on the server
     const res = await fetch(API_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model:      'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system:     SYSTEM_PROMPT,
-        messages:   messages,
-      }),
+      body: JSON.stringify({ messages }),
     });
 
-    const data  = await res.json();
-    const reply = data.content?.find(b => b.type === 'text')?.text || '...';
+    // Read as text first, so an HTML error page (timeout, 404, crash)
+    // is reported instead of silently breaking JSON parsing
+    const raw = await res.text();
+    let data = null;
+    try { data = JSON.parse(raw); } catch { /* not JSON */ }
+
+    if (res.status === 429 && data?.error?.type === 'rate_limited') {
+      throw Object.assign(new Error('rate limited'), { rateLimited: true });
+    }
+
+    if (!res.ok || !data) {
+      console.warn(`LMACANDA.EXE: proxy returned ${res.status}`, data?.error ?? raw.slice(0, 300));
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const reply = data.content?.find(b => b.type === 'text')?.text;
+    if (!reply) {
+      console.warn('LMACANDA.EXE: response had no text', data);
+      throw new Error('empty reply');
+    }
+
     messages.push({ role: 'assistant', content: reply });
     typingEl.classList.remove('visible');
     appendMessage('ai', reply);
-  } catch {
+
+  } catch (err) {
+    // "Failed to fetch" here = the request never arrived:
+    // local server not running, wrong URL, or CORS
+    console.warn('LMACANDA.EXE: send failed —', err.message);
+
+    // Remove the unanswered question so the history stays valid for the next try
+    messages.pop();
+
     typingEl.classList.remove('visible');
-    appendMessage('ai', 'signal lost. try again.');
+    appendMessage('ai', err.rateLimited
+      ? 'too many signals. give me a minute.'
+      : 'signal lost. try again.');
   } finally {
     sendBtn.disabled = false;
     inputEl.focus();
