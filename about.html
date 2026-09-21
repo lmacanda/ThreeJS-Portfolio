@@ -330,6 +330,14 @@ async function send(text) {
   }
 }
 
+// Opened from the room as a separate window → the back link closes it instead,
+// so the room isn't loaded a second time inside the chat window.
+const backBtn = document.getElementById('back-btn');
+if (window.opener) {
+  backBtn.textContent = '× close';
+  backBtn.addEventListener('click', e => { e.preventDefault(); window.close(); });
+}
+
 function sendSuggestion(btn) { send(btn.textContent); }
 
 sendBtn.addEventListener('click',   () => send(inputEl.value));

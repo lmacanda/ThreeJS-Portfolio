@@ -410,6 +410,19 @@ function hits(mesh) {
   return mesh ? raycaster.intersectObject(mesh, true).length > 0 : false;
 }
 
+// Opens the LMACANDA.EXE chat in its own window, centred over the room.
+// Called directly inside the click (not in a timeout) so popup blockers allow it.
+// The window name means a second click reuses the same window instead of opening another.
+const CHAT_W = 480, CHAT_H = 720;
+function openChatWindow() {
+  const left = Math.round(window.screenX + (window.outerWidth  - CHAT_W) / 2);
+  const top  = Math.round(window.screenY + (window.outerHeight - CHAT_H) / 2);
+  const win  = window.open('about.html', 'lmacanda-chat',
+    `popup,width=${CHAT_W},height=${CHAT_H},left=${left},top=${top}`);
+  if (win) win.focus();
+  else window.location.href = 'about.html';   // popup blocked → open in this tab, as before
+}
+
 threeCanvas.addEventListener('click', () => {
   raycaster.setFromCamera(mouse, camera);
 
@@ -427,7 +440,7 @@ threeCanvas.addEventListener('click', () => {
   }
 
   if (!camFocused) {
-    if (aboutMesh  && hits(aboutMesh))  { doFlash(); setTimeout(() => { window.location.href = 'about.html'; }, 120); return; }
+    if (aboutMesh  && hits(aboutMesh))  { doFlash(); openChatWindow(); return; }
     if (posterMesh && hits(posterMesh)) { openPosterPicker(); return; }
     if (musicMesh  && hits(musicMesh))  { doFlash(); setTimeout(() => window.open('https://www.nts.live', '_blank'), 120); return; }
     if (glowMesh   && hits(glowMesh))   { doFlash(); openMoodPrompt(); return; }
@@ -441,8 +454,8 @@ threeCanvas.addEventListener('click', () => {
 
 // Click toggles an endless spin. Speed eases toward the target each frame,
 // so the chair winds up smoothly and coasts to a stop when turned off.
-const CHAIR_MAX_SPEED = 0.15;   // radians per frame at full spin (~1 turn every 1.7s at 60fps)
-const CHAIR_EASE      = 1;   // how quickly it speeds up / slows down (0–1, higher = snappier)
+const CHAIR_MAX_SPEED = 0.06;   // radians per frame at full spin (~1 turn every 1.7s at 60fps)
+const CHAIR_EASE      = 0.03;   // how quickly it speeds up / slows down (0–1, higher = snappier)
 
 let chairSpinning = false;      // set to true to have it spinning from page load
 let chairSpeed    = 0;
