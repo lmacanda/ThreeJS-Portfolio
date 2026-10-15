@@ -442,7 +442,7 @@ threeCanvas.addEventListener('click', () => {
   if (!camFocused) {
     if (aboutMesh  && hits(aboutMesh))  { doFlash(); openChatWindow(); return; }
     if (posterMesh && hits(posterMesh)) { openPosterPicker(); return; }
-    if (musicMesh  && hits(musicMesh))  { doFlash(); setTimeout(() => window.open('https://www.nts.live', '_blank'), 120); return; }
+    if (musicMesh  && hits(musicMesh))  { doFlash(); openRadioPicker(); return; }
     if (glowMesh   && hits(glowMesh))   { doFlash(); openMoodPrompt(); return; }
     if (chairMesh  && hits(chairMesh))  { toggleChairSpin(); return; }
   }
@@ -1174,7 +1174,199 @@ function dismissHint() {
   threeCanvas.removeEventListener('pointerdown', dismissHint);
 }
 threeCanvas.addEventListener('pointerdown', dismissHint);
+// ═══════════════════════════════════════════════════════════════════════════
+//  BUSINESS CARD — Object_202 (the paper on the stool)
+//  Self-contained: paints a card texture on the mesh, shows a tooltip on
+//  hover, opens a link on click. Paste at the end of the module.
+// ═══════════════════════════════════════════════════════════════════════════
 
+const CARD = {
+  mesh:   'Object_202',
+  url:    'https://lauramacanda.eu',   // ← where clicking it goes
+  name:   'LAURA MACANDA',
+  role:   'FRONTEND DEVELOPER',
+  line:   'lauramacanda.eu',           // printed under the divider
+  flipY:  true,            // flip if the text comes out mirrored / upside down
+  rotate: 0,               // 0, 90, 180 or 270 — if the text faces the wrong way
+};
+
+// Draw the card. The mesh is ~3:2 landscape, so the canvas matches that.
+function makeCardTexture() {
+  const W = 1024, H = 674;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+
+  x.fillStyle = '#f2f1ea';                      // paper
+  x.fillRect(0, 0, W, H);
+  x.strokeStyle = '#111'; x.lineWidth = 8;
+  x.strokeRect(30, 30, W - 60, H - 60);
+
+  x.textAlign = 'center';
+  x.fillStyle = '#111';
+  x.font = 'bold 86px monospace';
+  x.fillText(CARD.name, W / 2, 270);
+
+  x.fillStyle = '#5a6b5a';
+  x.font = '46px monospace';
+  x.fillText(CARD.role, W / 2, 348);
+
+  x.strokeStyle = '#b9c2b9'; x.lineWidth = 4;
+  x.beginPath(); x.moveTo(W / 2 - 160, 410); x.lineTo(W / 2 + 160, 410); x.stroke();
+
+  x.fillStyle = '#111';
+  x.font = 'bold 50px monospace';
+  x.fillText(CARD.line, W / 2, 486);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.flipY      = CARD.flipY;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (CARD.rotate) {                            // rotate about the texture's centre
+    tex.center.set(0.5, 0.5);
+    tex.rotation = CARD.rotate * Math.PI / 180;
+  }
+  return tex;
+}
+
+// Its own tooltip, reusing the existing .tooltip styling
+const tooltipCard = document.createElement('div');
+tooltipCard.className   = 'tooltip';
+tooltipCard.textContent = '[ CLICK TO VISIT ]';
+document.body.appendChild(tooltipCard);
+
+let cardMesh = null;
+
+// The GLTF loads asynchronously, so wait for the mesh to appear
+const cardWait = setInterval(() => {
+  const mesh = scene.getObjectByName(CARD.mesh);
+  if (!mesh) return;
+  clearInterval(cardWait);
+
+  cardMesh = mesh;
+  mesh.material = new THREE.MeshStandardMaterial({
+    map: makeCardTexture(), roughness: 0.95, metalness: 0, side: THREE.DoubleSide,
+  });
+  console.log('✅ Card:', CARD.mesh);
+
+  try { addSpark(cardMesh, 'card'); } catch {}   // only if sparkles exist in this file
+}, 200);
+
+setTimeout(() => clearInterval(cardWait), 20000);
+
+// Click → open the link
+document.getElementById('canvas').addEventListener('click', () => {
+  if (!cardMesh) return;
+  raycaster.setFromCamera(mouse, camera);
+  if (raycaster.intersectObject(cardMesh, true).length) {
+    window.open(CARD.url, '_blank', 'noopener');
+  }
+});
+
+// Hover → tooltip + pointer cursor
+(function cardHover() {
+  requestAnimationFrame(cardHover);
+  if (!cardMesh) return;
+  raycaster.setFromCamera(mouse, camera);
+  const over = raycaster.intersectObject(cardMesh, true).length > 0;
+  tooltipCard.classList.toggle('visible', over);
+  if (over) document.getElementById('canvas').style.cursor = 'pointer';
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RADIO PICKER — the music box opens a list of stations instead of one link.
+//  Self-contained: builds its own panel and styles. Paste at the end of the
+//  module. The music-box click calls openRadioPicker().
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RADIOS = [
+  { label: 'COMMUNITY RADIO INDEX', note: 'world map of independent stations',
+    url: 'https://www.community-radio-index.com/' },
+  { label: 'EAST SIDE RADIO',       note: 'independent, live from Beato, Lisbon',
+    url: 'https://esr.li/' },
+  { label: 'NTS',                   note: 'london · 24/7',
+    url: 'https://www.nts.live' },
+];
+
+// Styles injected here so the file's <style> block stays untouched
+document.head.insertAdjacentHTML('beforeend', `<style>
+  #radio-picker {
+    position: fixed; bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(2,12,2,0.97);
+    border: 1px solid #00ff41;
+    padding: 14px 18px 12px;
+    z-index: 15;
+    display: none; flex-direction: column; gap: 8px;
+    min-width: 300px;
+  }
+  #radio-picker.visible { display: flex; }
+  #radio-picker > p {
+    color: #00b32c; font-size: 0.62rem; letter-spacing: 0.25em;
+    text-transform: uppercase; margin: 0;
+  }
+  #radio-close {
+    position: absolute; top: 6px; right: 10px;
+    background: none; border: none; color: #003b0f;
+    font-size: 16px; cursor: pointer; font-family: monospace; line-height: 1;
+  }
+  #radio-close:hover { color: #00ff41; }
+  #radio-list { display: flex; flex-direction: column; gap: 5px; }
+  #radio-list button {
+    background: transparent; border: 1px solid #003b0f;
+    color: #00b32c; font-family: monospace; text-align: left;
+    padding: 6px 10px; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #radio-list button:hover,
+  #radio-list button:focus {
+    border-color: #00ff41; color: #00ff41; outline: none;
+  }
+  #radio-list button span {
+    display: block; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  #radio-list button small {
+    display: block; color: #003b0f; font-size: 0.55rem;
+    letter-spacing: 0.12em; margin-top: 2px;
+  }
+  #radio-list button:hover small,
+  #radio-list button:focus small { color: #00b32c; }
+</style>`);
+
+const radioEl = document.createElement('div');
+radioEl.id = 'radio-picker';
+radioEl.innerHTML = `
+  <button id="radio-close">[x]</button>
+  <p>// tune in</p>
+  <div id="radio-list"></div>
+`;
+document.body.appendChild(radioEl);
+
+const radioListEl = radioEl.querySelector('#radio-list');
+
+RADIOS.forEach(r => {
+  const btn = document.createElement('button');
+  btn.innerHTML = `<span>${r.label}</span><small>${r.note}</small>`;
+  btn.addEventListener('click', () => {
+    window.open(r.url, '_blank', 'noopener');
+    closeRadioPicker();
+  });
+  radioListEl.appendChild(btn);
+});
+
+function openRadioPicker() {
+  closePosterPicker();
+  closeMoodPrompt();
+  radioEl.classList.add('visible');
+  // First station is focused, so Enter opens it straight away
+  setTimeout(() => radioListEl.querySelector('button')?.focus(), 50);
+}
+
+function closeRadioPicker() { radioEl.classList.remove('visible'); }
+
+radioEl.querySelector('#radio-close').addEventListener('click', closeRadioPicker);
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeRadioPicker();
+});
 </script>
 </body>
 </html>
